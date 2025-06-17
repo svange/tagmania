@@ -17,6 +17,7 @@ def main():
     cluster = ClusterSet(args.cluster, profile=args.profile)
     cluster.start_instances()
     print('Cluster %s started!' % cluster.cluster_names)
+    print("Hello Miguel and Bruce!")
 
 
 if __name__ == '__main__':
