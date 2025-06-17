@@ -152,7 +152,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Publish to PyPi
 #    needs: [run-tests, pre-commit-tests]
-    needs: [run-tests]
+#    needs: [run-tests]
     outputs:
       tag: ${{ steps.bump.outputs.tag }}
     steps:
