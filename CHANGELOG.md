@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. See
 [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.1.0](https://github.com/svange/tagmania/compare/v1.0.0...v1.1.0) (2025-06-17)
+
+
+### Features
+
+* showing off ([eca07c5](https://github.com/svange/tagmania/commit/eca07c55660b8220693e37ef013c7094e91e593a))
+
 ## 1.0.0 (2025-06-17)
 
 
