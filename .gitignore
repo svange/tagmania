@@ -1,0 +1,17 @@
+.chalice/deployments/
+.chalice/venv/
+.venv*/
+__pycache__/
+.pytest_cache/
+.env*
+*.log
+sdk
+.idea
+build
+dist
+*.egg-info
+.run/
+/.aws-sam/pipeline/pipelineconfig.toml
+/packaged-testing.yaml
+report.html
+.c9

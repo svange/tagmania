@@ -1,0 +1,243 @@
+name: Tagmania 🐍 publish to PyPI
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'dev'
+    tags-ignore:
+      - 'v*'
+
+env:
+  PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+  PYPI_TEST_TOKEN: ${{ secrets.PYPI_TEST_TOKEN }}
+  GH_REPO: ${{ github.repository }}
+  GH_ACCOUNT: ${{ github.repository_owner }}
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+jobs:
+#  pre-commit-tests:
+#    uses: ./.github/workflows/pre-commit.yml
+#    name: Enforce commit standards
+#    secrets: inherit
+#    permissions:
+#      id-token: write
+#      contents: read
+
+#  run-tests:
+#    name: Run pytest CI/CD tests
+#    strategy:
+#      matrix:
+##        python-version: [ "3.10", "3.11" ]
+#        python-version: [ "3.12" ]
+#        platform: [ ubuntu-20.04 ]
+#    runs-on: ${{ matrix.platform }}
+#
+#    steps:
+#      #----------------------------------------------
+#      #       check-out repo and set-up python
+#      #----------------------------------------------
+#    - name: Check out repository
+#      uses: actions/checkout@v4
+#    - name: Set up python
+#      id: setup-python
+#      uses: actions/setup-python@v5
+#      with:
+#        python-version: '3.12'
+#      #----------------------------------------------
+#      #  -----  install & configure poetry  -----
+#      #----------------------------------------------
+#    - name: Install Poetry
+#      uses: snok/install-poetry@v1
+#      with:
+#        virtualenvs-create: true
+#        virtualenvs-in-project: true
+#        installer-parallel: true
+#
+#      #----------------------------------------------
+#      #       load cached venv if cache exists
+#      #----------------------------------------------
+#    - name: Load cached venv
+#
+#      id: cached-poetry-dependencies
+#      uses: actions/cache@v4
+#      with:
+#        path: .venv
+#        key: venv-docs-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+#      #----------------------------------------------
+#      # install dependencies if cache does not exist
+#      #----------------------------------------------
+#    - name: Install dependencies
+#      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+#      run: poetry install --no-interaction --no-root
+#      #----------------------------------------------
+#      # install your root project, if required
+#      #----------------------------------------------
+#    - name: Install project
+#      run: poetry install --no-interaction
+#
+#      #----------------------------------------------
+#      #              run test suite
+#      #----------------------------------------------
+#    - name: Test with pytest
+#      run: |
+#        env
+#        poetry run pytest tests
+#
+#    - name: upload test output
+#      if: |
+#        ${{ !cancelled() }}
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: test-output
+#        path: pytest.log
+#
+#
+#    - name: upload pretty test results
+#      if: |
+#        ${{ !cancelled() }}
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: test-html
+#        path: report.html
+#
+#    - name: Skip tests if release commit
+#      run: echo "Skipping tests for release commit"
+
+  publish-prerelease:
+    if: github.ref == 'refs/heads/dev'
+#    needs: [run-tests, pre-commit-tests]
+#    needs: [run-tests]
+    runs-on: ubuntu-latest
+    name: Publish to PyPi test
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+#          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        #----------------------------------------------
+        #       check-out repo and set-up python
+        #----------------------------------------------
+#      - name: Check out repository
+#        uses: actions/checkout@v4
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        #----------------------------------------------
+        #  -----  install & configure poetry  -----
+        #----------------------------------------------
+      - name: Install Poetry
+
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: Python Semantic Release
+        uses: python-semantic-release/python-semantic-release@master
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TEST_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          PYPI_REPOSITORY: https://test.pypi.org/legacy/
+          RELEASE_BRANCH: dev
+
+  publish-release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    name: Publish to PyPi
+#    needs: [run-tests, pre-commit-tests]
+#    needs: [run-tests]
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+#          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        #----------------------------------------------
+        #       check-out repo and set-up python
+        #----------------------------------------------
+#      - name: Check out repository
+#        uses: actions/checkout@v4
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        #----------------------------------------------
+        #  -----  install & configure poetry  -----
+        #----------------------------------------------
+      - name: Install Poetry
+
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+        #----------------------------------------------
+        #       load cached venv if cache exists
+        #----------------------------------------------
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+#        #----------------------------------------------
+#        # install dependencies if cache does not exist
+#        #----------------------------------------------
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+#        #----------------------------------------------
+#        # install your root project, if required
+#        #----------------------------------------------
+      - name: Install project
+        run: poetry install --no-interaction
+
+      - uses: bjoluc/semantic-release-config-poetry@v2.2.0
+        env:
+          GIT_AUTHOR_NAME: "Samuel Vange (CTR)"
+          GIT_AUTHOR_EMAIL: "samuel.vange.ctr@us.navy.mil"
+          GIT_COMMITTER_NAME: "Samuel Vange (CTR)"
+          GIT_COMMITTER_EMAIL: "samuel.vange.ctr@us.navy.mil"
+        with:
+          pypi_token: ${{ secrets.PYPI_TOKEN }}
+          release_branch: ${{ github.ref_name }}
+          github_token: ${{ secrets.GH_TOKEN }}
+
+
+      - name: Show inputs to next workflow
+        run: |
+          echo "Inputs to next workflow"
+          echo "version: ${{ steps.bump.outputs.tag }}"
+          echo "gh_token: ${{ secrets.GH_TOKEN }}"
+          env
+
+#  deploy_docs:
+#    needs: [publish-release]
+#    uses: ./.github/workflows/publish_docs.yml
+#    secrets: inherit
+#        with:
+#          version: ${{ steps.bump.outputs.tag }}
+
+
+
+#
+#      - name: build docs
+#        run: |
+#          poetry run sphinx-build -b html ./docs/source ./docs/build
+#
+#      - uses: peaceiris/actions-gh-pages@v4
+#        with:
+#          github_token: ${{ secrets.GH_TOKEN }}
+#          publish_dir: ./docs/build

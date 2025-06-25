@@ -1,0 +1,234 @@
+[tool.poetry]
+name = "tagmania"
+version = "2.0.0"
+description = "Tool for manipulating sets of tagged resources in AWS."
+authors = ["Samuel Vange <7166607+svange@users.noreply.github.com>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/svange/tagmania"
+packages = [
+    { include = "*", from = "src" },
+]
+
+[tool.poetry.scripts]
+cluster-start = "start_cluster:main"
+cluster-stop = "stop_cluster:main"
+cluster-snap = "snapshot_manager:main"
+
+[tool.poetry.plugins."commitizen.plugin"] # completely untested
+cz_conventional_commits = "commitizen.cz.conventional_commits:ConventionalCommitsCz"
+#cz_jira = "commitizen.cz.jira:JiraSmartCz"
+cz_customize = "commitizen.cz.customize:CustomizeCommitsCz"
+cargo = "commitizen.providers:CargoProvider"
+commitizen = "commitizen.providers:CommitizenProvider"
+composer = "commitizen.providers:ComposerProvider"
+npm = "commitizen.providers:NpmProvider"
+pep621 = "commitizen.providers:Pep621Provider"
+poetry = "commitizen.providers:PoetryProvider"
+scm = "commitizen.providers:ScmProvider"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<4.0"
+boto3 = "^1.36.17"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-html = "^4.1.1"
+pytest-cov = "^6.0.0"
+augint-github = "^1.3.0"
+
+[tool.semantic_release]
+major_on_zero = false
+commit_message = "chore(release): release {version}"
+
+[tool.semantic_release.branches.main]
+match = "main"
+#commit_message = "chore(release): release {version}"
+prerelease = false
+
+[tool.semantic_release.branches.dev]
+match = "dev"
+#commit_message = "chore(pre-release): release {version}"
+prerelease_token = "dev"
+prerelease = true
+
+version_toml = [
+    "pyproject.toml:tool.poetry.version",
+]
+version_variable = [
+    "__init__.py:__version__",
+]
+build_command = "pip install poetry && poetry build"
+#logging_use_named_masks = true
+#major_on_zero = true
+tag_format = "v{version}"
+#exclude_commit_patterns = [
+#    'skip: ',
+#]
+
+[tool.semantic_release.publish]
+dist_glob_patterns = ["dist/*"]
+upload_to_vcs_release = true
+type = "github"
+
+[tool.semantic_release.remote.token]
+env = "GITHUB_TOKEN"
+fallback_env = "GH_TOKEN"
+
+
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "SemVer"
+version_provider = "poetry" #"scm"
+update_changelog_on_bump = true
+major_version_zero = true
+#version = "3.9.1"
+#version_files = [
+#  "pyproject.toml:version",
+#  "openbrain/__version__.py",
+#  ".pre-commit-config.yaml:rev:.+Openbrain",
+#]
+
+[tool.poetry.plugins."commitizen.scheme"]
+pep440 = "commitizen.version_schemes:Pep440"
+semver = "commitizen.version_schemes:SemVer"
+
+[tool.coverage] # not tested
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    # Have to re-enable the standard pragma
+    'pragma: no cover',
+    # Don't complain about missing debug-only code:
+    'def __repr__',
+    'if self\.debug',
+    # Don't complain if tests don't hit defensive assertion code:
+    'raise AssertionError',
+    'raise NotImplementedError',
+    # Don't complain if non-runnable code isn't run:
+    'if 0:',
+    'if __name__ == .__main__.:',
+    'if TYPE_CHECKING:',
+]
+omit = [
+    'env/*',
+    'venv/*',
+    '.venv/*',
+    '*/virtualenv/*',
+    '*/virtualenvs/*',
+    '*/tests/*',
+]
+
+[tool.pytest.ini_options]
+addopts = '-m "not redundant and not skip_ci" --html=report.html --self-contained-html'
+log_cli = true
+log_cli_level = "INFO"
+log_format = "%(asctime)s %(levelname)s %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
+log_file = "pytest.log"
+log_file_level = "INFO"
+#environment_table_redact_list = ".*key.*"
+#render_collapsed = "failed,error"
+markers = [
+    "redudant: mark test as redundant",
+    "end_to_end: mark test as an end-to-end test, meant for running in CI/CD against a live environment",
+    "no_infra: mark test as not requiring infrastructure, intended for running in CI/CD against local web server (to the runner)",
+    "skip_ci: mark as not suitable for ci",
+]
+
+[tool.ruff]
+line-length = 130
+lint.ignore = [
+    "E501",
+    "D1",
+    "D415"
+]
+# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
+lint.select = ["E", "F"]
+
+[tool.lint.isort]
+known-first-party = ["commitizen", "tests"]
+
+[tool.lint.pydocstyle]
+convention = "restructuredtext"
+
+[tool.mypy]
+files = "commitizen"
+disallow_untyped_decorators = true
+disallow_subclassing_any = true
+warn_return_any = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "py.*"  # Legacy pytest dependencies
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 130
+target-version = ['py312']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+| \.hg
+| \.mypy_cache
+| \.tox
+| \.venv
+| _build
+| buck-out
+| build
+)/
+'''
+
+[tool.flake8]
+max-line-length = 130
+extend-ignore = ["D203", "E203", "E251", "E266", "E302", "E305", "E401", "E402", "E501", "F401", "F403", "W503"]
+exclude = [".git", "__pycache__", "dist"]
+max-complexity = 10
+
+[tool.isort]
+atomic = true
+profile = "black"
+line_length = 130
+skip_gitignore = true
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
+unfixable = []
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+# Same as Black.
+line-length = 130
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+target-version = "py312"
