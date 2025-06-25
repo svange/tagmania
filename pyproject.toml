@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tagmania"
-version = "1.0.1"
+version = "2.0.0"
 description = "Tool for manipulating sets of tagged resources in AWS."
 authors = ["Samuel Vange <7166607+svange@users.noreply.github.com>"]
 readme = "README.md"

@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file. See
 [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.0.0](https://github.com/svange/tagmania/compare/v1.0.1...v2.0.0) (2025-06-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* pipeline
+
+### Bug Fixes
+
+* pipeline ([dcce3ca](https://github.com/svange/tagmania/commit/dcce3ca9e6a6420cb08405b707341a2a195a723a))
+
 ## [1.0.1](https://github.com/svange/tagmania/compare/v1.0.0...v1.0.1) (2025-06-25)
 
 
