@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. See
 [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 1.0.0 (2025-06-25)
+
+
+### Features
+
+* initial commit ([2b089c7](https://github.com/svange/tagmania/commit/2b089c7834d435ecc80aa46c7d568c8a866ef75c))
+
 ## [1.1.0](https://github.com/svange/tagmania/compare/v1.0.0...v1.1.0) (2025-06-17)
 
 
