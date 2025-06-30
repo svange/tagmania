@@ -17,70 +17,30 @@ env:
 
 jobs:
 
-  publish-prerelease:
-    if: github.ref == 'refs/heads/dev'
-    runs-on: ubuntu-latest
-    name: Publish to PyPi test
-    outputs:
-      tag: ${{ steps.bump.outputs.tag }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-#          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-        #----------------------------------------------
-        #       check-out repo and set-up python
-        #----------------------------------------------
-      - name: Set up python
-        id: setup-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-        #----------------------------------------------
-        #  -----  install & configure poetry  -----
-        #----------------------------------------------
-      - name: Install Poetry
-
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-      - name: Python Semantic Release
-        uses: python-semantic-release/python-semantic-release@master
-        env:
-          PYPI_TOKEN: ${{ secrets.PYPI_TEST_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          PYPI_REPOSITORY: https://test.pypi.org/legacy/
-          RELEASE_BRANCH: dev
-
   publish-release:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     name: Publish to PyPi
-#    needs: [run-tests, pre-commit-tests]
 #    needs: [run-tests]
     outputs:
       tag: ${{ steps.bump.outputs.tag }}
     steps:
+      #----------------------------------------------
+      #       check-out repo and set-up python
+      #----------------------------------------------
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 #          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-        #----------------------------------------------
-        #       check-out repo and set-up python
-        #----------------------------------------------
-#      - name: Check out repository
-#        uses: actions/checkout@v4
+
       - name: Set up python
         id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
         #----------------------------------------------
         #  -----  install & configure poetry  -----
         #----------------------------------------------
@@ -131,22 +91,3 @@ jobs:
           echo "version: ${{ steps.bump.outputs.tag }}"
           echo "gh_token: ${{ secrets.GH_TOKEN }}"
           env
-
-#  deploy_docs:
-#    needs: [publish-release]
-#    uses: ./.github/workflows/publish_docs.yml
-#    secrets: inherit
-#        with:
-#          version: ${{ steps.bump.outputs.tag }}
-
-
-
-#
-#      - name: build docs
-#        run: |
-#          poetry run sphinx-build -b html ./docs/source ./docs/build
-#
-#      - uses: peaceiris/actions-gh-pages@v4
-#        with:
-#          github_token: ${{ secrets.GH_TOKEN }}
-#          publish_dir: ./docs/build
