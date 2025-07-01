@@ -43,7 +43,8 @@ allow_zero_version = false
 no_git_verify = false
 tag_format = "v{version}"
 
-[tool.semantic_release]
+#[tool.semantic_release]
+build_command = "pip install poetry && poetry build"
 version_toml = ["pyproject.toml:project.version"]
 
 [semantic_release.branches.main]
