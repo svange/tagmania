@@ -43,6 +43,9 @@ allow_zero_version = false
 no_git_verify = false
 tag_format = "v{version}"
 
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+
 [semantic_release.branches.main]
 match = "(main|master)"
 prerelease_token = "rc"
