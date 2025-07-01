@@ -13,9 +13,9 @@ packages = [
 ]
 requires-python = ">=3.9,<4.0"
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+#[build-system]
+#requires = ["poetry-core>=2.0.0,<3.0.0"]
+#build-backend = "poetry.core.masonry.api"
 
 [project.scripts]
 cluster-start = "tagmania.start_cluster:main"

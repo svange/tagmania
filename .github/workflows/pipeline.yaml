@@ -53,6 +53,12 @@ jobs:
           virtualenvs-in-project: true
           installer-parallel: true
 
+      - name: debug
+        run: |
+          echo "Poetry version: $(poetry --version)"
+          echo "Python version: $(python --version)"
+          echo "Poetry config: $(poetry config --list)"
+
         #----------------------------------------------
         #       load cached venv if cache exists
         #----------------------------------------------
