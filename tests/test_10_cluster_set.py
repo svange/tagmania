@@ -1,5 +1,5 @@
 import pytest
-from iac_tools.clusterset import ClusterSet
+from tagmania.iac_tools.clusterset import ClusterSet
 
 class TestGitHubSecretsAndVars:
 

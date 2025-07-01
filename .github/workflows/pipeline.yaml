@@ -75,11 +75,6 @@ jobs:
         run: poetry install --no-interaction
 
       - uses: bjoluc/semantic-release-config-poetry@v2.2.0
-        env:
-          GIT_AUTHOR_NAME: "Samuel Vange (CTR)"
-          GIT_AUTHOR_EMAIL: "samuel.vange.ctr@us.navy.mil"
-          GIT_COMMITTER_NAME: "Samuel Vange (CTR)"
-          GIT_COMMITTER_EMAIL: "samuel.vange.ctr@us.navy.mil"
         with:
           pypi_token: ${{ secrets.PYPI_TOKEN }}
           release_branch: ${{ github.ref_name }}

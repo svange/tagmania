@@ -1,5 +1,5 @@
 import argparse
-from iac_tools.clusterset import ClusterSet
+from tagmania.iac_tools.clusterset import ClusterSet
 
 def main():
     parser = argparse.ArgumentParser(
