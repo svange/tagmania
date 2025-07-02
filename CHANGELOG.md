@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. See
 ## [2.0.0](https://github.com/svange/tagmania/compare/v1.0.1...v2.0.0) (2025-06-25)
 
 
-### ⚠ BREAKING CHANGES
+### âš  BREAKING CHANGES
 
 * pipeline
 
