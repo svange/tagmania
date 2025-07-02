@@ -1,6 +1,6 @@
 [project]
 name = "tagmania"
-version = "2.0.1"
+version = "2.0.2"
 description = "Tool for manipulating sets of tagged resources in AWS."
 authors = [
     {name = "Samuel Vange",email = "7166607+svange@users.noreply.github.com"}
