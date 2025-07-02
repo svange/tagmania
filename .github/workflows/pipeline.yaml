@@ -16,94 +16,82 @@ env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
 jobs:
-
-  publish-release:
-    if: github.ref == 'refs/heads/main'
+  release:
     runs-on: ubuntu-latest
-    name: Publish to PyPi
-#    needs: [run-tests]
-    outputs:
-      tag: ${{ steps.bump.outputs.tag }}
+    concurrency:
+      group: ${{ github.workflow }}-release-${{ github.ref_name }}
+      cancel-in-progress: false
+
+    permissions:
+      contents: write  # needed for commit, tag, release creation
+
     steps:
-      #----------------------------------------------
-      #       check-out repo and set-up python
-      #----------------------------------------------
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
-          persist-credentials: false
-#          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
-      - name: Configure GitHub token for push
-        run: git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}
+      - name: Force branch to workflow SHA
+        run: git reset --hard ${{ github.sha }}
 
-      - name: Set up python
-        id: setup-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-        #----------------------------------------------
-        #  -----  install & configure poetry  -----
-        #----------------------------------------------
-      - name: Install Poetry
-
-        uses: snok/install-poetry@v1
-        with:
-          version: 2.1.3
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-        #----------------------------------------------
-        #       load cached venv if cache exists
-        #----------------------------------------------
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
-#        #----------------------------------------------
-#        # install dependencies if cache does not exist
-#        #----------------------------------------------
-      - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-
-#        #----------------------------------------------
-#        # install your root project, if required
-#        #----------------------------------------------
-      - name: Install project
-        run: poetry install --no-interaction
-
-      - name: Bump version + changelog + tag
-        run: poetry run semantic-release version
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Build artifacts
-        run: poetry build
-
-      - name: Publish to PyPI + GitHub release
-        run: poetry run semantic-release publish
-        env:
-          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-
-#      - uses: bjoluc/semantic-release-config-poetry@v2.2.0
-#        with:
-#          pypi_token: ${{ secrets.PYPI_TOKEN }}
-#          release_branch: ${{ github.ref_name }}
-#          github_token: ${{ secrets.GH_TOKEN }}
-
-
-      - name: Show inputs to next workflow
+      - name: Verify upstream has NOT changed
+        shell: bash
         run: |
-          echo "Inputs to next workflow"
-          echo "version: ${{ steps.bump.outputs.tag }}"
-          echo "gh_token: ${{ secrets.GH_TOKEN }}"
-          env
+          set +o pipefail
+          UPSTREAM_BRANCH_NAME="$(git status -sb | head -n1 | cut -d' ' -f2 | grep -E '\.{3}' | cut -d'.' -f4)"
+          if [ -z "$UPSTREAM_BRANCH_NAME" ]; then
+            echo "::error::Unable to determine upstream branch name!"
+            exit 1
+          fi
+          git fetch "${UPSTREAM_BRANCH_NAME%%/*}"
+          UPSTREAM_SHA="$(git rev-parse "$UPSTREAM_BRANCH_NAME")"
+          if [ "$(git rev-parse HEAD)" != "$UPSTREAM_SHA" ]; then
+            echo "::error::Upstream has changed, aborting release..."
+            exit 1
+          fi
+
+      - name: Semantic Version Release
+        id: release
+        uses: python-semantic-release/python-semantic-release@v10.2.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          git_committer_name: github-actions
+          git_committer_email: actions@users.noreply.github.com
+
+      - name: Upload artifacts to GitHub Release
+        uses: python-semantic-release/publish-action@v10.2.0
+        if: steps.release.outputs.released == 'true'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.release.outputs.tag }}
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: distribution-artifacts
+          path: dist
+          if-no-files-found: error
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: release
+    if: ${{ needs.release.outputs.released == 'true' }}
+
+    permissions:
+      contents: read
+      id-token: write  # needed for PyPI trusted publisher flow
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: distribution-artifacts
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1  # replace with latest tag or commit hash
+        with:
+          packages-dir: dist
+          print-hash: true
+          verbose: true
