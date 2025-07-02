@@ -25,6 +25,7 @@ jobs:
     outputs:
       tag: ${{ steps.bump.outputs.tag }}
     steps:
+      -
       #----------------------------------------------
       #       check-out repo and set-up python
       #----------------------------------------------
