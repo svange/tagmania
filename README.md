@@ -9,7 +9,7 @@
 [![Made with GH Actions](https://img.shields.io/badge/CI-GitHub_Actions-blue?logo=github-actions&logoColor=white)](https://github.com/features/actions "Go to GitHub Actions homepage")
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 
-Tools that automate common tasks for clusters of ec2 instances ins AWS. 
+Tools that automate common tasks for clusters of ec2 instances ins AWS.
 ```yaml
 Cluster: <CLUSTER_NAME>
 ```

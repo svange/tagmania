@@ -436,7 +436,7 @@ class ClusterSet:
     def create_volumes(self, label):
         """
         Create new volumes from managed snapshots.
-        
+
         Args:
             - label: label of snapshots to restore
         Returns:
@@ -732,7 +732,7 @@ class ClusterSet:
     def get_subnet(self):
         """
         Get subnet belonging to this cluster.
-        
+
         Args:
             none
         Returns:

@@ -1,97 +1,266 @@
-name: Tagmania 🐍 publish to PyPI
+name: Augmenting Integrations 🐍 Continuous Delivery
 
 on:
   push:
     branches:
-      - 'main'
-      - 'dev'
-    tags-ignore:
-      - 'v*'
+      - main
+      - dev # enable for APIs and libraries
+#      - feat/* # enable for UIs
 
 env:
-  PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-  PYPI_TEST_TOKEN: ${{ secrets.PYPI_TEST_TOKEN }}
-  GH_REPO: ${{ github.repository }}
-  GH_ACCOUNT: ${{ github.repository_owner }}
+  # From .env file
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
+# default: least privileged permissions across all jobs
+permissions:
+  contents: read
+
 jobs:
+  pre-commit-tests:
+    uses: ./.github/workflows/pre-commit.yml
+    name: Enforce commit standards
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+
+  run-tests:
+    name: Run pytest CI/CD tests
+    strategy:
+      matrix:
+        #        python-version: [ "3.10", "3.11" ]
+        python-version: [ "3.12" ]
+        platform: [ ubuntu-latest ]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      #----------------------------------------------
+      #       check-out repo and set-up python
+      #----------------------------------------------
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        #----------------------------------------------
+        #  -----  install & configure poetry  -----
+        #----------------------------------------------
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+        #----------------------------------------------
+        #       load cached venv if cache exists
+        #----------------------------------------------
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-docs-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        #----------------------------------------------
+        # install dependencies if cache does not exist
+        #----------------------------------------------
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+        #----------------------------------------------
+        # install your root project, if required
+        #----------------------------------------------
+      - name: Install project
+        run: poetry install --no-interaction
+        #----------------------------------------------
+        #              run test suite
+        #----------------------------------------------
+      - name: Test with pytest
+        run: |
+          env
+          poetry run pytest tests
+
+      - name: upload test output
+        if: |
+          ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: pytest.log
+
+
+      - name: upload pretty test results
+        if: |
+          ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-html
+          path: report.html
+
+      - name: Skip tests if release commit
+        run: echo "Skipping tests for release commit"
+
   release:
+    needs: [ pre-commit-tests, run-tests ]
+    name: Semantic Version Release
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-release-${{ github.ref_name }}
       cancel-in-progress: false
 
     permissions:
-      contents: write  # needed for commit, tag, release creation
+      contents: write
 
     steps:
-      - name: Checkout repository
+      # Note: We checkout the repository at the branch that triggered the workflow
+      # with the entire history to ensure to match PSR's release branch detection
+      # and history evaluation.
+      # However, we forcefully reset the branch to the workflow sha because it is
+      # possible that the branch was updated while the workflow was running. This
+      # prevents accidentally releasing un-evaluated changes.
+      - name: Setup | Checkout Repository on Release Branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - name: Force branch to workflow SHA
-        run: git reset --hard ${{ github.sha }}
-
-      - name: Verify upstream has NOT changed
+      - name: Setup | Force release branch to be at workflow sha
+        run: |
+          git reset --hard ${{ github.sha }}
+        #----------------------------------------------
+        #  -----  install & configure python  -----
+        #----------------------------------------------
+      - name: Setup | Set up python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        #----------------------------------------------
+        #  -----  install & configure poetry  -----
+        #----------------------------------------------
+      - name: Setup | Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+        #----------------------------------------------
+        #       load cached venv if cache exists
+        #----------------------------------------------
+      - name: Setup | Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        #----------------------------------------------
+        # install dependencies if cache does not exist
+        #----------------------------------------------
+      - name: Setup | Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+        #----------------------------------------------
+        # install your root project, if required
+        #----------------------------------------------
+      - name: Setup | Install project
+        run: poetry install --no-interaction
+        #----------------------------------------------
+        # Final safety check before running the release
+        #----------------------------------------------
+      - name: Evaluate | Verify upstream has NOT changed
+        # Last chance to abort before causing an error as another PR/push was applied to
+        # the upstream branch while this workflow was running. This is important
+        # because we are committing a version change (--commit).
         shell: bash
         run: |
           set +o pipefail
-          UPSTREAM_BRANCH_NAME="$(git status -sb | head -n1 | cut -d' ' -f2 | grep -E '\.{3}' | cut -d'.' -f4)"
+
+          UPSTREAM_BRANCH_NAME="$(git status -sb | head -n 1 | cut -d' ' -f2 | grep -E '\.{3}' | cut -d'.' -f4)"
+          printf '%s\n' "Upstream branch name: $UPSTREAM_BRANCH_NAME"
+
+          set -o pipefail
+
           if [ -z "$UPSTREAM_BRANCH_NAME" ]; then
-            echo "::error::Unable to determine upstream branch name!"
-            exit 1
+              printf >&2 '%s\n' "::error::Unable to determine upstream branch name!"
+              exit 1
           fi
+
           git fetch "${UPSTREAM_BRANCH_NAME%%/*}"
-          UPSTREAM_SHA="$(git rev-parse "$UPSTREAM_BRANCH_NAME")"
-          if [ "$(git rev-parse HEAD)" != "$UPSTREAM_SHA" ]; then
-            echo "::error::Upstream has changed, aborting release..."
-            exit 1
+
+          if ! UPSTREAM_SHA="$(git rev-parse "$UPSTREAM_BRANCH_NAME")"; then
+              printf >&2 '%s\n' "::error::Unable to determine upstream branch sha!"
+              exit 1
           fi
 
-      - name: Semantic Version Release
-        id: release
-        uses: python-semantic-release/python-semantic-release@v10.2.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: github-actions
-          git_committer_email: actions@users.noreply.github.com
+          HEAD_SHA="$(git rev-parse HEAD)"
 
-      - name: Upload artifacts to GitHub Release
+          if [ "$HEAD_SHA" != "$UPSTREAM_SHA" ]; then
+              printf >&2 '%s\n' "[HEAD SHA] $HEAD_SHA != $UPSTREAM_SHA [UPSTREAM SHA]"
+              printf >&2 '%s\n' "::error::Upstream has changed, aborting release..."
+              exit 1
+          fi
+
+          printf '%s\n' "Verified upstream branch has not changed, continuing with release..."
+
+
+      - name: Action | Semantic Version Release
+        run: |
+          # Run semantic release to bump the version, update the changelog, commit the change, and create a tag.
+          poetry run semantic-release -v version
+      - name: Publish | Upload to GitHub Release Assets
         uses: python-semantic-release/publish-action@v10.2.0
         if: steps.release.outputs.released == 'true'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ steps.release.outputs.tag }}
-
-      - name: Upload distribution artifacts
+      - name: Upload | Distribution Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: distribution-artifacts
           path: dist
           if-no-files-found: error
+#      - name: Debug | Show Debug Information
+#        if: |
+#          ${{ !cancelled() }}
+#        run: |
+#          env
+#          tree
 
-  deploy:
-    runs-on: ubuntu-latest
+  pypi-publish:
     needs: release
-    if: ${{ needs.release.outputs.released == 'true' }}
-
+    # 1. Separate out the publish to pypi step from the publish to github step to run each step at
+    #    the least amount of token privilege and to use github's artifact system to store the release
+    # 2. Also, deployments can fail, and its better to have a separate job if you need to retry
+    #    and it won't require reversing the release.
+    name: Upload release to PyPI or TestPyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/${{ github.event.repository.name }}
     permissions:
-      contents: read
-      id-token: write  # needed for PyPI trusted publisher flow
-
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
-      - name: Download build artifacts
+      - name: Setup | Download Build Artifacts
         uses: actions/download-artifact@v4
+        id: artifact-download
         with:
           name: distribution-artifacts
-          path: dist
+          path: dist/
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1  # replace with latest tag or commit hash
+      - name: Publish package distributions to PyPI Test
+        if: github.ref == 'refs/heads/dev'
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: dist
-          print-hash: true
-          verbose: true
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish package distributions to PyPI
+        if: github.ref == 'refs/heads/main'
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  deploy_docs:
+    if: false # Set to true to enable docs deployment
+    needs: [release]
+    uses: ./.github/workflows/publish_docs.yml
+    secrets: inherit

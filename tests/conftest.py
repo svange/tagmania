@@ -9,5 +9,3 @@ class Secret:
 
     def __str___(self):
         return "*******"
-
-
