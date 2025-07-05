@@ -324,7 +324,6 @@ jobs:
     needs: release-version
     runs-on: ubuntu-latest
     permissions:
-      id-token: write # For AWS OIDC credentials
       contents: write  # for gh-pages push
 
     steps:
@@ -368,17 +367,6 @@ jobs:
         #----------------------------------------------
       - name: Install project
         run: poetry install --no-interaction
-
-      - name: Assume pipeline role
-        if: steps.check_template.outputs.exists == 'true'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
-          aws-region: ${{ env.TESTING_REGION }}
-          role-session-name: testing-infra
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
-
 
       - name: Generate documentation
         run: |
