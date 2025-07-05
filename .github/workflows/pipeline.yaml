@@ -20,7 +20,7 @@ env:
   MODULE_NAME: tagmania
   PYTHON_VERSION: '3.12'
   TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing
-
+  AWS_REGION: ${{ vars.TESTING_REGION }}
 
 # default: least privileged permissions across all jobs
 permissions:
