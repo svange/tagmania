@@ -20,7 +20,6 @@ env:
   MODULE_NAME: tagmania
   PYTHON_VERSION: '3.12'
   TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing
-  AWS_REGION: ${{ vars.TESTING_REGION }}
 
 # default: least privileged permissions across all jobs
 permissions:
@@ -105,6 +104,7 @@ jobs:
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
             --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE}
+
 
   run-tests:
     permissions:
@@ -324,6 +324,7 @@ jobs:
     needs: release-version
     runs-on: ubuntu-latest
     permissions:
+      id-token: write # For AWS OIDC credentials
       contents: write  # for gh-pages push
 
     steps:
@@ -367,9 +368,17 @@ jobs:
         #----------------------------------------------
       - name: Install project
         run: poetry install --no-interaction
-        #----------------------------------------------
-        #              run test suite
-        #----------------------------------------------
+
+      - name: Assume pipeline role
+        if: steps.check_template.outputs.exists == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          aws-region: ${{ env.TESTING_REGION }}
+          role-session-name: testing-infra
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
 
       - name: Generate documentation
         run: |
