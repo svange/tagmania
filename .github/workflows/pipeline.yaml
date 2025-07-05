@@ -8,15 +8,26 @@ on:
 #      - feat/* # enable for UIs
 
 env:
-  # From .env file
+  # Vars from .env file or GitHub Environment
+  TESTING_REGION: ${{ vars.TESTING_REGION }}
+  TESTING_ARTIFACTS_BUCKET: ${{ vars.TESTING_ARTIFACTS_BUCKET }}
+  TESTING_CLOUDFORMATION_EXECUTION_ROLE: ${{ vars.TESTING_CLOUDFORMATION_EXECUTION_ROLE }}
+  TESTING_PIPELINE_EXECUTION_ROLE: ${{ vars.TESTING_PIPELINE_EXECUTION_ROLE }}
+  # Secrets from .env file or GitHub Secrets
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  # For Pipeline Only
+  MODULE_NAME: tagmania
+  PYTHON_VERSION: '3.12'
+  TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing
+
 
 # default: least privileged permissions across all jobs
 permissions:
   contents: read
 
 jobs:
-  pre-commit-tests:
+  run-pre-commit-tests:
     uses: ./.github/workflows/pre-commit.yml
     name: Enforce commit standards
     secrets: inherit
@@ -24,8 +35,84 @@ jobs:
       id-token: write
       contents: read
 
+  deploy-infrastructure:
+    permissions:
+      id-token: write
+      contents: read
+
+    name: Deploy test infrastructure (if template.yaml exists)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for SAM template
+        id: check_template
+        run: |
+          if [ -f template.yaml ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+
+      - name: Set up SAM CLI
+        if: steps.check_template.outputs.exists == 'true'
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Build resources
+        if: steps.check_template.outputs.exists == 'true'
+        run: sam build --use-container
+
+      - name: Assume pipeline role
+        if: steps.check_template.outputs.exists == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          aws-region: ${{ env.TESTING_REGION }}
+          role-session-name: testing-infra
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - name: Package artifacts
+        if: steps.check_template.outputs.exists == 'true'
+        run: |
+          sam package \
+            --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
+            --region ${TESTING_REGION} \
+            --output-template-file packaged-testing.yaml
+
+      - name: Validate packaged template
+        if: steps.check_template.outputs.exists == 'true'
+        run: sam validate --lint -t packaged-testing.yaml
+
+      - uses: actions/upload-artifact@v4
+        if: steps.check_template.outputs.exists == 'true'
+        with:
+          name: packaged-testing.yaml
+          path: packaged-testing.yaml
+
+      - name: Deploy stack
+        if: steps.check_template.outputs.exists == 'true'
+        run: |
+          sam deploy \
+            --stack-name ${TESTING_STACK_NAME} \
+            --template-file packaged-testing.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${TESTING_REGION} \
+            --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE}
+
   run-tests:
+    permissions:
+      id-token: write
+      contents: read
+
     name: Run pytest CI/CD tests
+    needs: deploy-infrastructure
     strategy:
       matrix:
         #        python-version: [ "3.10", "3.11" ]
@@ -43,7 +130,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
         #----------------------------------------------
         #  -----  install & configure poetry  -----
         #----------------------------------------------
@@ -74,6 +161,14 @@ jobs:
         #----------------------------------------------
       - name: Install project
         run: poetry install --no-interaction
+
+      - name: Set up AWS OIDC credentials for thests
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          aws-region: ${{ env.TESTING_REGION }}
+          role-session-name: testing-infra-tests
+
         #----------------------------------------------
         #              run test suite
         #----------------------------------------------
@@ -97,13 +192,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-html
-          path: report.html
+          path: test-report.html
 
       - name: Skip tests if release commit
         run: echo "Skipping tests for release commit"
 
-  release:
-    needs: [ pre-commit-tests, run-tests ]
+  release-version:
+    needs: [ run-pre-commit-tests, run-tests ]
     name: Semantic Version Release
     runs-on: ubuntu-latest
     concurrency:
@@ -136,7 +231,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
         #----------------------------------------------
         #  -----  install & configure poetry  -----
         #----------------------------------------------
@@ -209,27 +304,93 @@ jobs:
         run: |
           # Run semantic release to bump the version, update the changelog, commit the change, and create a tag.
           poetry run semantic-release -v version
+
       - name: Publish | Upload to GitHub Release Assets
         uses: python-semantic-release/publish-action@v10.2.0
-        if: steps.release.outputs.released == 'true'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ steps.release.outputs.tag }}
+
       - name: Upload | Distribution Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: distribution-artifacts
           path: dist
           if-no-files-found: error
-#      - name: Debug | Show Debug Information
-#        if: |
-#          ${{ !cancelled() }}
-#        run: |
-#          env
-#          tree
 
-  pypi-publish:
-    needs: release
+  generate-and-deploy-docs-site:
+    if: github.ref == 'refs/heads/main'
+    name: Generate documentation, gather test results and changelog, and deploy to GitHub Pages
+    needs: release-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # for gh-pages push
+
+    steps:
+      #----------------------------------------------
+      #       check-out repo and set-up python
+      #----------------------------------------------
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+        #----------------------------------------------
+        #  -----  install & configure poetry  -----
+        #----------------------------------------------
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+        #----------------------------------------------
+        #       load cached venv if cache exists
+        #----------------------------------------------
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-docs-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        #----------------------------------------------
+        # install dependencies if cache does not exist
+        #----------------------------------------------
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+        #----------------------------------------------
+        # install your root project, if required
+        #----------------------------------------------
+      - name: Install project
+        run: poetry install --no-interaction
+        #----------------------------------------------
+        #              run test suite
+        #----------------------------------------------
+
+      - name: Generate documentation
+        run: |
+          poetry run pdoc ${{ env.MODULE_NAME }} --output-dir docs
+
+      - name: Download test HTML report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test-html
+          path: docs
+
+      - name: Deploy docs to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+
+
+  publish-to-pypi:
+    needs: release-version
     # 1. Separate out the publish to pypi step from the publish to github step to run each step at
     #    the least amount of token privilege and to use github's artifact system to store the release
     # 2. Also, deployments can fail, and its better to have a separate job if you need to retry
@@ -258,9 +419,3 @@ jobs:
       - name: Publish package distributions to PyPI
         if: github.ref == 'refs/heads/main'
         uses: pypa/gh-action-pypi-publish@release/v1
-
-  deploy_docs:
-    if: false # Set to true to enable docs deployment
-    needs: [release]
-    uses: ./.github/workflows/publish_docs.yml
-    secrets: inherit

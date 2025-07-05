@@ -26,15 +26,14 @@ black = "^25.1.0"
 commitizen = "^4.8.3"
 flake8 = "^7.3.0"
 isort = "^6.0.1"
+pdoc = "^15.0.4"
+pytest-click = "^1.1.0"
 
 [project.scripts]
 cluster-start = "tagmania.start_cluster:main"
 cluster-stop = "tagmania.stop_cluster:main"
 cluster-snap = "tagmania.snapshot_manager:main"
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.semantic_release]
 assets = []
@@ -52,7 +51,7 @@ build_command_env = []
 
 
 [tool.pytest.ini_options]
-addopts = '-m "not redundant and not skip_ci" --html=report.html --self-contained-html'
+addopts = '-m "not redundant and not skip_ci" --html=test-report.html --self-contained-html --css=resources/pytest-html.css'
 log_cli = true
 log_cli_level = "INFO"
 log_format = "%(asctime)s %(levelname)s %(message)s"

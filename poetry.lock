@@ -1104,6 +1104,23 @@ files = [
 ]
 
 [[package]]
+name = "pdoc"
+version = "15.0.4"
+description = "API Documentation for Python Projects"
+optional = false
+python-versions = ">=3.9"
+groups = ["dev"]
+files = [
+    {file = "pdoc-15.0.4-py3-none-any.whl", hash = "sha256:f9028e85e7bb8475b054e69bde1f6d26fc4693d25d9fa1b1ce9009bec7f7a5c4"},
+    {file = "pdoc-15.0.4.tar.gz", hash = "sha256:cf9680f10f5b4863381f44ef084b1903f8f356acb0d4cc6b64576ba9fb712c82"},
+]
+
+[package.dependencies]
+Jinja2 = ">=2.11.0"
+MarkupSafe = ">=1.1.1"
+pygments = ">=2.12.0"
+
+[[package]]
 name = "platformdirs"
 version = "4.3.8"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
@@ -1446,6 +1463,22 @@ tomli = {version = ">=1", markers = "python_version < \"3.11\""}
 
 [package.extras]
 dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "requests", "setuptools", "xmlschema"]
+
+[[package]]
+name = "pytest-click"
+version = "1.1.0"
+description = "Pytest plugin for Click"
+optional = false
+python-versions = "*"
+groups = ["dev"]
+files = [
+    {file = "pytest_click-1.1.0-py3-none-any.whl", hash = "sha256:eade4742c2f02c345e78a32534a43e8db04acf98d415090539dacc880b7cd0e9"},
+    {file = "pytest_click-1.1.0.tar.gz", hash = "sha256:fdd9f6721f877dda021e7c5dc73e70aecd37e5ed23ec6820f8a7b3fd7b4f8d30"},
+]
+
+[package.dependencies]
+click = ">=6.0"
+pytest = ">=5.0"
 
 [[package]]
 name = "pytest-cov"
@@ -2103,4 +2136,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<4.0"
-content-hash = "638d19779ff011a24a345cf32fc44c32d43af9fe6663334bdd654114ad9e4f11"
+content-hash = "064df0f68077bb3ad68db5ad74384e2086e9b68f40fe1c97bf27f77c37b05082"
