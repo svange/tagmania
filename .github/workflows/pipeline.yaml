@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - main
-      - dev # enable for APIs and libraries
-#      - feat/* # enable for UIs
+      - dev
+      - feat/*
+      - fix/*
 
 env:
   # Vars from .env file or GitHub Environment
@@ -17,9 +18,10 @@ env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   # For Pipeline Only
-  MODULE_NAME: tagmania
-  PYTHON_VERSION: '3.12'
+  MODULE_NAME: ${{ vars.MODULE_NAME }}
+  PYTHON_VERSION: ${{ vars.PYTHON_VERSION }}
   TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing
+
 
 # default: least privileged permissions across all jobs
 permissions:
@@ -104,6 +106,7 @@ jobs:
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
             --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE}
+
 
 
   run-tests:
@@ -218,6 +221,7 @@ jobs:
       - name: Setup | Checkout Repository on Release Branch
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GH_TOKEN }}
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
@@ -367,6 +371,9 @@ jobs:
         #----------------------------------------------
       - name: Install project
         run: poetry install --no-interaction
+        #----------------------------------------------
+        #              run test suite
+        #----------------------------------------------
 
       - name: Generate documentation
         run: |
@@ -384,7 +391,6 @@ jobs:
           github_token: ${{ secrets.GH_TOKEN }}
           publish_dir: ./docs
           publish_branch: gh-pages
-
 
   publish-to-pypi:
     needs: release-version
