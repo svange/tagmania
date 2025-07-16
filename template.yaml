@@ -188,12 +188,18 @@ Resources:
               - ec2:DescribeImages
               - ec2:DescribeAvailabilityZones
             Resource: "*"
-          - Sid: EC2WriteOperations
+          - Sid: EC2InstanceOperations
             Effect: Allow
             Action:
               - ec2:StartInstances
               - ec2:StopInstances
-              - ec2:CreateVolume
+            Resource: "*"
+            Condition:
+              StringEquals:
+                ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name]
+          - Sid: EC2VolumeTaggedOperations
+            Effect: Allow
+            Action:
               - ec2:DeleteVolume
               - ec2:AttachVolume
               - ec2:CreateTags
@@ -202,6 +208,11 @@ Resources:
             Condition:
               StringEquals:
                 ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name]
+          - Sid: EC2VolumeUntaggedOperations
+            Effect: Allow
+            Action:
+              - ec2:CreateVolume
+            Resource: "*"
           - Sid: EC2VolumeOperations
             Effect: Allow
             Action:
