@@ -166,6 +166,53 @@ Resources:
         - Key: Owner
           Value: test
 
+  # Testing Role - allows pipeline to run EC2 tests
+  TestingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-testing-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: sts:AssumeRole
+            Condition:
+              StringLike:
+                aws:PrincipalArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-sam-cli-managed-*"
+      Policies:
+        - PolicyName: TestingPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: EC2ReadOperations
+                Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:DescribeSnapshots
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeImages
+                  - ec2:DescribeAvailabilityZones
+                Resource: "*"
+              - Sid: EC2WriteOperations
+                Effect: Allow
+                Action:
+                  - ec2:StartInstances
+                  - ec2:StopInstances
+                  - ec2:CreateVolume
+                  - ec2:DeleteVolume
+                  - ec2:AttachVolume
+                  - ec2:DetachVolume
+                  - ec2:CreateSnapshot
+                  - ec2:DeleteSnapshot
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name]
+
 Outputs:
   Cluster1Name:
     Description: Name of the first test cluster
@@ -208,3 +255,9 @@ Outputs:
     Value: !Ref Cluster2Instance2
     Export:
       Name: !Sub "${AWS::StackName}-Cluster2Instance2"
+
+  TestingRoleArn:
+    Description: ARN of the testing role for EC2 operations
+    Value: !GetAtt TestingRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-TestingRole"

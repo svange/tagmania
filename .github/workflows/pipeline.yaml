@@ -14,6 +14,7 @@ env:
   TESTING_ARTIFACTS_BUCKET: ${{ vars.TESTING_ARTIFACTS_BUCKET }}
   TESTING_CLOUDFORMATION_EXECUTION_ROLE: ${{ vars.TESTING_CLOUDFORMATION_EXECUTION_ROLE }}
   TESTING_PIPELINE_EXECUTION_ROLE: ${{ vars.TESTING_PIPELINE_EXECUTION_ROLE }}
+  AWS_ACCOUNT_ID: 330659553592
   # Secrets from .env file or GitHub Secrets
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
@@ -168,9 +169,9 @@ jobs:
       - name: Set up AWS OIDC credentials for thests
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.TESTING_CLOUDFORMATION_EXECUTION_ROLE }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.TESTING_STACK_NAME }}-testing-role
           aws-region: ${{ env.TESTING_REGION }}
-          role-session-name: testing-infra-tests
+          role-session-name: testing-ec2-ops
 
         #----------------------------------------------
         #              run test suite
