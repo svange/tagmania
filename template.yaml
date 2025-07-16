@@ -112,7 +112,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: 4
+            VolumeSize: 8
             VolumeType: gp3
             DeleteOnTermination: true
       Tags:
@@ -136,7 +136,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: 4
+            VolumeSize: 8
             VolumeType: gp3
             DeleteOnTermination: true
       Tags:
@@ -159,7 +159,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: 4
+            VolumeSize: 8
             VolumeType: gp3
             DeleteOnTermination: true
       Tags:
