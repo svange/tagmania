@@ -180,7 +180,9 @@ Resources:
             Action: sts:AssumeRole
             Condition:
               StringLike:
-                aws:PrincipalArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-sam-cli-managed-*"
+                aws:PrincipalArn:
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-sam-cli-managed-*"
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/GitHubActions-*"
       Policies:
         - PolicyName: TestingPolicy
           PolicyDocument:
