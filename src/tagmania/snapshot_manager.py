@@ -1,4 +1,5 @@
 import argparse
+import re
 from tagmania.iac_tools.clusterset import ClusterSet
 
 def main():
@@ -42,6 +43,11 @@ def main():
     parser.add_argument('-n', '--name',
         default=None,
         help='Name to use for the snapshots.'
+    )
+    parser.add_argument('-t', '--target',
+        type=str,
+        default=None,
+        help='Regex pattern to match instance Name tags for targeted restore.'
     )
     parser.add_argument('cluster',
         help='''
@@ -98,26 +104,71 @@ def main():
             snapshot_name = "default"
         else:
             snapshot_name = args.name
-        confirm = input(f"Restore backup of {args.cluster} named '{snapshot_name}'? [no] ")
-        if confirm == "yes":
-            print(f"Restoring cluster.")
-            instances = cluster.get_instances()
-            if len(instances) == 0:
-                print("No instances found. Operation aborted.")
-            else:
-                # Stop cluster (not clean)
-                cluster.stop_instances()
-                # Detach and delete current volumes
-                cluster.detach_volumes()
-                cluster.delete_volumes()
-                # Create new volumes from snapshots and attach them
-                cluster.create_volumes(snapshot_name)
-                cluster.attach_volumes(snapshot_name)
-                # Start cluster
-                #cluster.start_instances()
-                print("Operation completed successfully!")
+
+        # Handle targeted restore
+        if args.target:
+            try:
+                # Validate regex pattern
+                re.compile(args.target)
+
+                # Check if any instances match the pattern
+                instances = cluster.get_instances()
+                filtered_instances = cluster._filter_instances_by_name_regex(instances, args.target)
+
+                if len(filtered_instances) == 0:
+                    print(f"No instances found matching pattern '{args.target}'. Operation aborted.")
+                else:
+                    print(f"Found {len(filtered_instances)} instances matching pattern '{args.target}':")
+                    for instance in filtered_instances:
+                        name_tag = "Unknown"
+                        if instance.tags:
+                            for tag in instance.tags:
+                                if tag['Key'] == 'Name':
+                                    name_tag = tag['Value']
+                                    break
+                        print(f"  - {instance.id} ({name_tag})")
+
+                    confirm = input(f"Restore backup '{snapshot_name}' for these {len(filtered_instances)} instances? [no] ")
+                    if confirm == "yes":
+                        print(f"Restoring targeted instances.")
+                        # Stop targeted instances
+                        cluster.stop_instances_targeted(args.target)
+                        # Detach and delete volumes from targeted instances
+                        cluster.detach_volumes_targeted(args.target)
+                        cluster.delete_volumes_targeted(args.target)
+                        # Create new volumes from snapshots and attach them
+                        cluster.create_volumes_targeted(snapshot_name, args.target)
+                        cluster.attach_volumes_targeted(snapshot_name, args.target)
+                        # Start targeted instances
+                        # cluster.start_instances_targeted(args.target)
+                        print("Operation completed successfully!")
+                    else:
+                        print("Operation aborted.")
+            except re.error as e:
+                print(f"Invalid regex pattern '{args.target}': {e}")
+                print("Operation aborted.")
         else:
-            print("Operation aborted.")
+            # Full cluster restore
+            confirm = input(f"Restore backup of {args.cluster} named '{snapshot_name}'? [no] ")
+            if confirm == "yes":
+                print(f"Restoring cluster.")
+                instances = cluster.get_instances()
+                if len(instances) == 0:
+                    print("No instances found. Operation aborted.")
+                else:
+                    # Stop cluster (not clean)
+                    cluster.stop_instances()
+                    # Detach and delete current volumes
+                    cluster.detach_volumes()
+                    cluster.delete_volumes()
+                    # Create new volumes from snapshots and attach them
+                    cluster.create_volumes(snapshot_name)
+                    cluster.attach_volumes(snapshot_name)
+                    # Start cluster
+                    #cluster.start_instances()
+                    print("Operation completed successfully!")
+            else:
+                print("Operation aborted.")
 
     if args.list:
         if args.name is None:

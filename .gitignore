@@ -15,3 +15,6 @@ dist
 /packaged-testing.yaml
 report.html
 .c9
+test-report.html
+.aws-sam/
+docs

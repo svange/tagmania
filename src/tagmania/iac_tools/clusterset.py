@@ -1,6 +1,7 @@
 import datetime
 import time
 import logging
+import re
 import boto3
 from .tagset import TagSet
 from .filterset import FilterSet
@@ -370,11 +371,10 @@ class ClusterSet:
         """
         self._logger.debug("method_call: get_restored_volumes")
         fs = FilterSet(self.get_cluster_filter())
-        # These volumes should be in the available state since it is expected
-        # that they were just recently re-constituted from snapshots
+        # These volumes can be in available state (if just created) or in-use state (if attached)
+        # We need to check for both states to properly detect restored volumes
         # | Note: The 'status' filter corresponds to the 'state' attribute in
         # | the AWS management console. Not sure about the reason behind that.
-        fs.add('status', 'available')
         fs.add('tag:automation_key', self.AUTOMATION_KEY)
         # Optionally, get volumes with the given label
         # This might not really be needed because the way the snapshot manager
@@ -758,3 +758,281 @@ class ClusterSet:
         subnet = self.get_subnet()
         print(f"Un-tagging subnet {subnet.id}")
         self._ec2_client.delete_tags(Resources=[subnet.id], Tags=tags)
+
+    def _filter_instances_by_name_regex(self, instances, name_pattern):
+        """
+        Filter instances by matching their Name tag against a regex pattern.
+
+        Args:
+            instances: list of EC2 instance objects
+            name_pattern: regex pattern to match against Name tags
+        Returns:
+            list of filtered instances
+        """
+        if not name_pattern:
+            return instances
+
+        try:
+            pattern = re.compile(name_pattern)
+        except re.error as e:
+            raise ValueError(f"Invalid regex pattern '{name_pattern}': {e}")
+
+        filtered_instances = []
+        for instance in instances:
+            name_tag = None
+            if instance.tags:
+                for tag in instance.tags:
+                    if tag['Key'] == 'Name':
+                        name_tag = tag['Value']
+                        break
+
+            if name_tag and pattern.search(name_tag):
+                filtered_instances.append(instance)
+
+        return filtered_instances
+
+    def stop_instances_targeted(self, name_pattern):
+        """
+        Stop instances that match the given Name tag regex pattern.
+
+        Args:
+            name_pattern: regex pattern to match instance Name tags
+        Returns:
+            none
+        """
+        self._logger.debug("method_call: stop_instances_targeted")
+        all_instances = self.get_running_instances()
+        instances = self._filter_instances_by_name_regex(all_instances, name_pattern)
+
+        if len(instances) == 0:
+            print(f"No running instances found matching pattern '{name_pattern}'.")
+        else:
+            # Stop instances
+            for i in instances:
+                name = TagSet(i.tags).get('Name')
+                print(f"Stopping {name} ({i.id})")
+                i.stop()
+            # Wait for instances to stop
+            print(f"Waiting for {len(instances)} instances to stop...")
+            for i in instances:
+                i.wait_until_stopped()
+
+    def start_instances_targeted(self, name_pattern):
+        """
+        Start instances that match the given Name tag regex pattern.
+
+        Args:
+            name_pattern: regex pattern to match instance Name tags
+        Returns:
+            none
+        """
+        self._logger.debug("method_call: start_instances_targeted")
+        all_instances = self.get_stopped_instances()
+        instances = self._filter_instances_by_name_regex(all_instances, name_pattern)
+
+        if len(instances) == 0:
+            print(f"No stopped instances found matching pattern '{name_pattern}'.")
+        else:
+            # Start instances
+            for i in instances:
+                name = TagSet(i.tags).get('Name')
+                print(f"Starting {name} ({i.id})")
+                i.start()
+            # Wait for instances to start
+            print(f"Waiting for {len(instances)} instances to start...")
+            for i in instances:
+                i.wait_until_running()
+
+    def detach_volumes_targeted(self, name_pattern):
+        """
+        Detach volumes from instances that match the given Name tag regex pattern.
+
+        Args:
+            name_pattern: regex pattern to match instance Name tags
+        Returns:
+            none
+        """
+        self._logger.debug("method_call: detach_volumes_targeted")
+        all_instances = self.get_instances()
+        instances = self._filter_instances_by_name_regex(all_instances, name_pattern)
+
+        if len(instances) == 0:
+            print(f"No instances found matching pattern '{name_pattern}'.")
+            return
+
+        # Build list of volume_ids so to pass to waiter in one big batch
+        volume_ids = []
+        # For each matching instance, detach all volumes
+        for i in instances:
+            volumes = i.volumes.all()
+            for volume in volumes:
+                device = volume.attachments[0]['Device']
+                instance_name = TagSet(i.tags).get('Name')
+                shortname = instance_name.split('.')[0]
+                print(f"Detaching {device} ({volume.id}) from {shortname} ({i.id})")
+                volume.detach_from_instance(Device=device, InstanceId=i.id)
+                volume_ids.append(volume.id)
+        # Wait for volumes to detach
+        if len(volume_ids) > 0:
+            print(f"Waiting for {len(volume_ids)} volumes to be detached...")
+            self.wait_for_volumes(volume_ids, 'volume_available')
+
+    def delete_volumes_targeted(self, name_pattern):
+        """
+        Delete volumes associated with instances that match the given Name tag regex pattern.
+
+        Args:
+            name_pattern: regex pattern to match instance Name tags
+        Returns:
+            none
+        """
+        self._logger.debug("method_call: delete_volumes_targeted")
+        # Get all volumes and filter by instance name pattern
+        all_volumes = self.get_volumes()
+        targeted_volumes = []
+
+        for volume in all_volumes:
+            volume_instance_tag = None
+            if volume.tags:
+                for tag in volume.tags:
+                    if tag['Key'] == 'Instance':
+                        volume_instance_tag = tag['Value']
+                        break
+
+            if volume_instance_tag:
+                try:
+                    pattern = re.compile(name_pattern)
+                    if pattern.search(volume_instance_tag):
+                        targeted_volumes.append(volume)
+                except re.error as e:
+                    raise ValueError(f"Invalid regex pattern '{name_pattern}': {e}")
+
+        if len(targeted_volumes) == 0:
+            print(f"No volumes found for instances matching pattern '{name_pattern}'.")
+        else:
+            volume_ids = []
+            for volume in targeted_volumes:
+                print(f"Deleting volume {volume.id}")
+                volume.delete()
+                volume_ids.append(volume.id)
+            # Wait for the volumes to be deleted
+            print(f"Waiting for {len(volume_ids)} volumes to be deleted...")
+            self.wait_for_volumes(volume_ids, 'volume_deleted')
+
+    def create_volumes_targeted(self, label, name_pattern):
+        """
+        Create new volumes from snapshots for instances matching the given Name tag regex pattern.
+
+        Args:
+            label: label of snapshots to restore
+            name_pattern: regex pattern to match instance Name tags
+        Returns:
+            none
+        """
+        self._logger.debug("method_call: create_volumes_targeted")
+
+        # Validate regex pattern first
+        try:
+            pattern = re.compile(name_pattern)
+        except re.error as e:
+            raise ValueError(f"Invalid regex pattern '{name_pattern}': {e}")
+
+        snapshots = self.get_snapshots(label)
+
+        # Check if snapshot list is empty
+        if len(snapshots) == 0:
+            print(f"Error: No snapshots found with label '{label}'.")
+            return
+
+        # Filter snapshots by instance name pattern
+        targeted_snapshots = []
+
+        for snapshot in snapshots:
+            ts = TagSet(snapshot.tags)
+            instance = ts.get('Instance')
+            if instance and pattern.search(instance):
+                targeted_snapshots.append(snapshot)
+
+        if len(targeted_snapshots) == 0:
+            print(f"No snapshots found for instances matching pattern '{name_pattern}'.")
+            return
+
+        # Create volumes
+        volume_ids = []
+        for snapshot in targeted_snapshots:
+            ts = TagSet(snapshot.tags)
+            device = ts.get('Device')
+            instance = ts.get('Instance')
+            if not device:
+                raise Exception(f"Error: create_volume: Can't find device tag for snapshot {snapshot.id}.")
+            if not instance:
+                raise Exception(f"Error: create_volume: Can't find instance tag for snapshot {snapshot.id}.")
+
+            # Determine availability zone from one of the cluster instances
+            avail_zone = self.get_instances()[0].placement['AvailabilityZone']
+            # Make tags
+            ts = TagSet()
+            ts.add('Cluster', self.cluster_names)
+            ts.add('Device', device)
+            ts.add('Instance', instance)
+            ts.add('Label', label)
+            ts.add('Name', f"{instance} - {device}")
+            ts.add('automation_key', self.AUTOMATION_KEY)
+            tags = ts.to_list()
+            # Create volume
+            print(f"Creating volume from snapshot {snapshot.id} for {instance}")
+            volume = self._ec2.create_volume(
+                SnapshotId=snapshot.id,
+                AvailabilityZone=avail_zone,
+                TagSpecifications=[{'ResourceType': 'volume', 'Tags': tags}]
+            )
+            volume_ids.append(volume.id)
+
+        # Wait for the volumes to be created
+        if len(volume_ids) > 0:
+            print(f"Waiting for {len(volume_ids)} volumes to be created...")
+            self.wait_for_volumes(volume_ids, 'volume_available')
+            time.sleep(10)
+
+    def attach_volumes_targeted(self, label, name_pattern):
+        """
+        Attach volumes to instances that match the given Name tag regex pattern.
+
+        Args:
+            label: label of volumes to attach
+            name_pattern: regex pattern to match instance Name tags
+        Returns:
+            none
+        """
+        self._logger.debug("method_call: attach_volumes_targeted")
+        all_instances = self.get_instances()
+        instances = self._filter_instances_by_name_regex(all_instances, name_pattern)
+
+        if len(instances) == 0:
+            print(f"No instances found matching pattern '{name_pattern}'.")
+            return
+
+        volumes = self.get_restored_volumes(label)
+
+        # Note: regex pattern already validated in _filter_instances_by_name_regex
+
+        volume_ids = []
+        for i in instances:
+            instance_name = TagSet(i.tags).get('Name')
+            for volume in volumes:
+                ts = TagSet(volume.tags)
+                volume_instance = ts.get('Instance')
+                device = ts.get('Device')
+                if volume_instance == instance_name:
+                    # Attach volume
+                    shortname = instance_name.split('.')[0]
+                    print(f"Attaching {device} ({volume.id}) to {shortname} ({i.id})")
+                    volume.attach_to_instance(Device=device, InstanceId=i.id)
+                    volume_ids.append(volume.id)
+
+        if len(volume_ids) == 0:
+            print(f"Error: No volumes to attach for instances matching pattern '{name_pattern}'.")
+        else:
+            # Wait for the volumes to be attached
+            print(f"Waiting for {len(volume_ids)} volumes to be attached...")
+            self.wait_for_volumes(volume_ids, 'volume_in_use')

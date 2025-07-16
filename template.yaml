@@ -1,7 +1,210 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: A minimal no-op SAM template for testing pipeline deployment
+Description: Test infrastructure for tagmania - 2 clusters with different instance counts
+
+Parameters:
+  Cluster1Name:
+    Type: String
+    Default: test1
+    Description: Name of the first test cluster (1 instance)
+
+  Cluster2Name:
+    Type: String
+    Default: test2
+    Description: Name of the second test cluster (2 instances)
+
+  KeyPairName:
+    Type: String
+    Default: test
+    Description: EC2 Key Pair for SSH access
 
 Resources:
-  NoOpResource:
-    Type: AWS::CloudFormation::WaitConditionHandle
+  # VPC for test instances
+  TestVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/24
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: tagmania-test-vpc
+
+  # Internet Gateway
+  TestIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: tagmania-test-igw
+
+  # Attach IGW to VPC
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref TestVPC
+      InternetGatewayId: !Ref TestIGW
+
+  # Public Subnet
+  TestSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TestVPC
+      CidrBlock: 10.0.0.0/28
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: tagmania-test-subnet
+
+  # Route Table
+  TestRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref TestVPC
+      Tags:
+        - Key: Name
+          Value: tagmania-test-rt
+
+  # Route to Internet
+  TestRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref TestRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref TestIGW
+
+  # Associate Route Table with Subnet
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TestSubnet
+      RouteTableId: !Ref TestRouteTable
+
+  # Security Group (minimal - only outbound)
+  TestSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Minimal security group for test instances
+      VpcId: !Ref TestVPC
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: tagmania-test-sg
+
+  # Cluster 1 - Single Instance
+  Cluster1Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.nano
+      ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2 AMI (us-east-1)
+      SubnetId: !Ref TestSubnet
+      SecurityGroupIds:
+        - !Ref TestSecurityGroup
+      KeyName: !Ref KeyPairName
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster1Name}-web-01"
+        - Key: Cluster
+          Value: !Ref Cluster1Name
+        - Key: Owner
+          Value: test
+
+  # Cluster 2 - Two Instances
+  Cluster2Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.nano
+      ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2 AMI (us-east-1)
+      SubnetId: !Ref TestSubnet
+      SecurityGroupIds:
+        - !Ref TestSecurityGroup
+      KeyName: !Ref KeyPairName
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster2Name}-api-01"
+        - Key: Cluster
+          Value: !Ref Cluster2Name
+        - Key: Owner
+          Value: test
+
+  Cluster2Instance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.nano
+      ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2 AMI (us-east-1)
+      SubnetId: !Ref TestSubnet
+      SecurityGroupIds:
+        - !Ref TestSecurityGroup
+      KeyName: !Ref KeyPairName
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster2Name}-db-01"
+        - Key: Cluster
+          Value: !Ref Cluster2Name
+        - Key: Owner
+          Value: test
+
+Outputs:
+  Cluster1Name:
+    Description: Name of the first test cluster
+    Value: !Ref Cluster1Name
+    Export:
+      Name: !Sub "${AWS::StackName}-Cluster1Name"
+
+  Cluster2Name:
+    Description: Name of the second test cluster
+    Value: !Ref Cluster2Name
+    Export:
+      Name: !Sub "${AWS::StackName}-Cluster2Name"
+
+  VPCId:
+    Description: VPC ID
+    Value: !Ref TestVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC"
+
+  SubnetId:
+    Description: Subnet ID
+    Value: !Ref TestSubnet
+    Export:
+      Name: !Sub "${AWS::StackName}-Subnet"
+
+  Cluster1Instance1Id:
+    Description: Cluster 1 Instance 1 ID
+    Value: !Ref Cluster1Instance1
+    Export:
+      Name: !Sub "${AWS::StackName}-Cluster1Instance1"
+
+  Cluster2Instance1Id:
+    Description: Cluster 2 Instance 1 ID
+    Value: !Ref Cluster2Instance1
+    Export:
+      Name: !Sub "${AWS::StackName}-Cluster2Instance1"
+
+  Cluster2Instance2Id:
+    Description: Cluster 2 Instance 2 ID
+    Value: !Ref Cluster2Instance2
+    Export:
+      Name: !Sub "${AWS::StackName}-Cluster2Instance2"

@@ -178,7 +178,7 @@ jobs:
       - name: Test with pytest
         run: |
           env
-          poetry run pytest tests
+          poetry run pytest tests --runslow
 
       - name: upload test output
         if: |
