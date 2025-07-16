@@ -99,6 +99,9 @@ jobs:
       - name: Deploy stack
         if: steps.check_template.outputs.exists == 'true'
         run: |
+          # Extract role name from ARN
+          PIPELINE_ROLE_NAME=${TESTING_PIPELINE_EXECUTION_ROLE##*/}
+
           sam deploy \
             --stack-name ${TESTING_STACK_NAME} \
             --template-file packaged-testing.yaml \
@@ -106,7 +109,8 @@ jobs:
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
-            --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE}
+            --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE} \
+            --parameter-overrides PipelineExecutionRoleName=${PIPELINE_ROLE_NAME}
 
 
 
@@ -137,14 +141,6 @@ jobs:
           role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
           aws-region: ${{ env.TESTING_REGION }}
           role-session-name: testing-pipeline
-
-      - name: Assume testing role for EC2 operations
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.TESTING_STACK_NAME }}-testing-role
-          aws-region: ${{ env.TESTING_REGION }}
-          role-session-name: testing-ec2-ops
-          role-chaining: true
       - name: Set up python
         id: setup-python
         uses: actions/setup-python@v5

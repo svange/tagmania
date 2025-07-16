@@ -18,6 +18,10 @@ Parameters:
     Default: test
     Description: EC2 Key Pair for SSH access
 
+  PipelineExecutionRoleName:
+    Type: String
+    Description: Name of the pipeline execution role that needs EC2 testing permissions
+
 Resources:
   # VPC for test instances
   TestVPC:
@@ -166,51 +170,43 @@ Resources:
         - Key: Owner
           Value: test
 
-  # Testing Role - allows pipeline to run EC2 tests
-  TestingRole:
-    Type: AWS::IAM::Role
+  # Managed Policy for EC2 testing operations
+  EC2TestingPolicy:
+    Type: AWS::IAM::ManagedPolicy
     Properties:
-      RoleName: !Sub "${AWS::StackName}-testing-role"
-      AssumeRolePolicyDocument:
+      ManagedPolicyName: !Sub "${AWS::StackName}-EC2TestingPolicy"
+      Description: "Policy for EC2 testing operations on tagged clusters"
+      PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Effect: Allow
-            Principal:
-              AWS:
-                - !Sub "arn:aws:iam::${AWS::AccountId}:root"
-                - "arn:aws:iam::330659553592:role/aws-sam-cli-managed-tagmania--PipelineExecutionRole-37mMy1dR1LPM"
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: TestingPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Sid: EC2ReadOperations
-                Effect: Allow
-                Action:
-                  - ec2:DescribeInstances
-                  - ec2:DescribeSnapshots
-                  - ec2:DescribeVolumes
-                  - ec2:DescribeImages
-                  - ec2:DescribeAvailabilityZones
-                Resource: "*"
-              - Sid: EC2WriteOperations
-                Effect: Allow
-                Action:
-                  - ec2:StartInstances
-                  - ec2:StopInstances
-                  - ec2:CreateVolume
-                  - ec2:DeleteVolume
-                  - ec2:AttachVolume
-                  - ec2:DetachVolume
-                  - ec2:CreateSnapshot
-                  - ec2:DeleteSnapshot
-                  - ec2:CreateTags
-                  - ec2:DeleteTags
-                Resource: "*"
-                Condition:
-                  StringEquals:
-                    ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name]
+          - Sid: EC2ReadOperations
+            Effect: Allow
+            Action:
+              - ec2:DescribeInstances
+              - ec2:DescribeSnapshots
+              - ec2:DescribeVolumes
+              - ec2:DescribeImages
+              - ec2:DescribeAvailabilityZones
+            Resource: "*"
+          - Sid: EC2WriteOperations
+            Effect: Allow
+            Action:
+              - ec2:StartInstances
+              - ec2:StopInstances
+              - ec2:CreateVolume
+              - ec2:DeleteVolume
+              - ec2:AttachVolume
+              - ec2:DetachVolume
+              - ec2:CreateSnapshot
+              - ec2:DeleteSnapshot
+              - ec2:CreateTags
+              - ec2:DeleteTags
+            Resource: "*"
+            Condition:
+              StringEquals:
+                ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name]
+      Roles:
+        - !Ref PipelineExecutionRoleName
 
 Outputs:
   Cluster1Name:
@@ -255,8 +251,8 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-Cluster2Instance2"
 
-  TestingRoleArn:
-    Description: ARN of the testing role for EC2 operations
-    Value: !GetAtt TestingRole.Arn
+  EC2TestingPolicyArn:
+    Description: ARN of the EC2 testing policy attached to pipeline execution role
+    Value: !Ref EC2TestingPolicy
     Export:
-      Name: !Sub "${AWS::StackName}-TestingRole"
+      Name: !Sub "${AWS::StackName}-EC2TestingPolicy"
