@@ -55,7 +55,7 @@ def main():
             looking at any node in the AWS console and looking for the "Cluster"
             tag.'''
     )
-    parser.add_argument('--profile', '-p', help='the AWS profile to use', default='default')
+    parser.add_argument('--profile', '-p', help='the AWS profile to use', default=None)
     args = parser.parse_args()
 
     cluster = ClusterSet(args.cluster, profile=args.profile)
