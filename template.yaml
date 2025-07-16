@@ -103,7 +103,7 @@ Resources:
   Cluster1Instance1:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.nano
+      InstanceType: t3.micro
       ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2 AMI (us-east-1)
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
@@ -112,7 +112,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: 8
+            VolumeSize: 4
             VolumeType: gp3
             DeleteOnTermination: true
       Tags:
@@ -127,7 +127,7 @@ Resources:
   Cluster2Instance1:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.nano
+      InstanceType: t3.micro
       ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2 AMI (us-east-1)
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
@@ -136,7 +136,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: 8
+            VolumeSize: 4
             VolumeType: gp3
             DeleteOnTermination: true
       Tags:
@@ -150,7 +150,7 @@ Resources:
   Cluster2Instance2:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.nano
+      InstanceType: t3.micro
       ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2 AMI (us-east-1)
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
@@ -159,7 +159,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: 8
+            VolumeSize: 4
             VolumeType: gp3
             DeleteOnTermination: true
       Tags:

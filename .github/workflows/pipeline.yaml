@@ -206,6 +206,42 @@ jobs:
       - name: Skip tests if release commit
         run: echo "Skipping tests for release commit"
 
+  cleanup-infrastructure:
+    permissions:
+      id-token: write
+      contents: read
+
+    name: Cleanup test infrastructure
+    needs: run-tests
+    if: success()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Assume pipeline role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          aws-region: ${{ env.TESTING_REGION }}
+          role-session-name: cleanup-infra
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - name: Delete stack
+        run: |
+          echo "Deleting test infrastructure stack to save costs..."
+          sam delete \
+            --stack-name ${TESTING_STACK_NAME} \
+            --region ${TESTING_REGION} \
+            --no-prompts \
+            --s3-bucket ${TESTING_ARTIFACTS_BUCKET} || echo "Stack may not exist or already deleted"
+
   release-version:
     needs: [ run-pre-commit-tests, run-tests ]
     name: Semantic Version Release
