@@ -19,15 +19,12 @@ class TestSnapshotManagerCLI:
     def run_snapshot_manager(self, args):
         """Helper to run snapshot_manager with given arguments"""
         cmd = [sys.executable, '-m', 'tagmania.snapshot_manager'] + args
-        env = os.environ.copy()
-        env['AWS_PROFILE'] = 'test'
 
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             input='yes\n',  # Automatically confirm prompts
-            env=env,
             cwd=os.path.dirname(os.path.dirname(__file__))  # Run from project root
         )
         return result
@@ -68,7 +65,7 @@ class TestSnapshotManagerCLI:
         # Step 1: Create a backup using CLI
         result = subprocess.run([
             sys.executable, '-m', 'tagmania.snapshot_manager',
-            '--backup', '--name', 'cli-test', 'test2', '--profile', 'test'
+            '--backup', '--name', 'cli-test', 'test2'
         ], capture_output=True, text=True, input='yes\n')
 
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
@@ -78,7 +75,7 @@ class TestSnapshotManagerCLI:
             # Step 2: Test targeted restore using CLI
             result = subprocess.run([
                 sys.executable, '-m', 'tagmania.snapshot_manager',
-                '--restore', '--target', '.*-api-.*', '--name', 'cli-test', 'test2', '--profile', 'test'
+                '--restore', '--target', '.*-api-.*', '--name', 'cli-test', 'test2'
             ], capture_output=True, text=True, input='yes\n')
 
             # The CLI should show the filtered instances and complete successfully
@@ -96,14 +93,14 @@ class TestSnapshotManagerCLI:
             # Cleanup: delete test snapshots
             subprocess.run([
                 sys.executable, '-m', 'tagmania.snapshot_manager',
-                '--delete', '--name', 'cli-test', 'test2', '--profile', 'test'
+                '--delete', '--name', 'cli-test', 'test2'
             ], capture_output=True, text=True, input='yes\n')
 
     def test_list_snapshots_cli(self):
         """Test listing snapshots via CLI"""
         result = subprocess.run([
             sys.executable, '-m', 'tagmania.snapshot_manager',
-            '--list', 'test2', '--profile', 'test'
+            '--list', 'test2'
         ], capture_output=True, text=True)
 
         assert result.returncode == 0
