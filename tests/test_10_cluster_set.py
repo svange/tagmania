@@ -1,5 +1,4 @@
 import pytest
-import os
 from tagmania.iac_tools.clusterset import ClusterSet
 
 class TestBasicClusterOperations:
@@ -17,16 +16,12 @@ class TestBasicClusterOperations:
         """
         Test the ClusterSet class stop_instances method.
         """
-        if not os.getenv('AWS_DEFAULT_REGION'):
-            pytest.skip("No AWS credentials configured")
         cluster.stop_instances()
 
     def test_clusterset_start(self, cluster):
         """
         Test the ClusterSet class start_instances method.
         """
-        if not os.getenv('AWS_DEFAULT_REGION'):
-            pytest.skip("No AWS credentials configured")
         cluster.start_instances()
 
     @pytest.mark.slow
@@ -34,8 +29,6 @@ class TestBasicClusterOperations:
         """
         Test the snapshot backup script.
         """
-        if not os.getenv('AWS_DEFAULT_REGION'):
-            pytest.skip("No AWS credentials configured")
 
         cluster.stop_instances()
         cluster.create_snapshots('test-basic')
@@ -45,8 +38,6 @@ class TestBasicClusterOperations:
         """
         Test the snapshot restore script.
         """
-        if not os.getenv('AWS_DEFAULT_REGION'):
-            pytest.skip("No AWS credentials configured")
 
         cluster.stop_instances()
         cluster.detach_volumes()
@@ -59,14 +50,10 @@ class TestBasicClusterOperations:
         """
         Test the snapshot delete script.
         """
-        if not os.getenv('AWS_DEFAULT_REGION'):
-            pytest.skip("No AWS credentials configured")
         cluster.delete_snapshots('test-basic')
 
     def test_cleanup_after_tests(self, cluster):
         """Cleanup test resources"""
-        if not os.getenv('AWS_DEFAULT_REGION'):
-            pytest.skip("No AWS credentials configured")
         # Ensure instances are running for next tests
         cluster.start_instances()
 

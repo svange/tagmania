@@ -1,18 +1,4 @@
-
-import os
-import pytest
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_aws_environment():
-    """Set up AWS environment for tests"""
-    # Ensure AWS profile is set for tests
-    if 'AWS_PROFILE' not in os.environ:
-        os.environ['AWS_PROFILE'] = 'test'
-
-    # Ensure a default region is set if not already configured
-    if 'AWS_DEFAULT_REGION' not in os.environ:
-        os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
+from pathlib import Path
 
 
 class Secret:
@@ -24,3 +10,14 @@ class Secret:
 
     def __str___(self):
         return "*******"
+
+def pytest_configure(config):
+    # compute the CSS file’s absolute path from this file’s location
+    project_root = Path(__file__).parent.parent
+    css_file = project_root / "resources" / "pytest-html.css"
+    # override whatever was in addopts
+    config.option.css = [str(css_file)]
+
+    # ensure we’re still inlining it into the HTML
+    if not config.option.self_contained_html:
+        config.option.self_contained_html = True
