@@ -168,7 +168,7 @@ jobs:
       - name: Set up AWS OIDC credentials for thests
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          role-to-assume: ${{ env.TESTING_CLOUDFORMATION_EXECUTION_ROLE }}
           aws-region: ${{ env.TESTING_REGION }}
           role-session-name: testing-infra-tests
 
