@@ -176,13 +176,10 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+              AWS:
+                - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+                - "arn:aws:iam::330659553592:role/aws-sam-cli-managed-tagmania--PipelineExecutionRole-37mMy1dR1LPM"
             Action: sts:AssumeRole
-            Condition:
-              StringLike:
-                aws:PrincipalArn:
-                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-sam-cli-managed-*"
-                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/GitHubActions-*"
       Policies:
         - PolicyName: TestingPolicy
           PolicyDocument:
