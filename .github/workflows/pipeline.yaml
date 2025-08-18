@@ -5,8 +5,9 @@ on:
     branches:
       - main
       - dev
-      - feat/*
-      - fix/*
+  pull_request:
+    branches:
+      - main
 
 env:
   # Vars from .env file or GitHub Environment
