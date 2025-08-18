@@ -22,7 +22,8 @@ env:
   # For Pipeline Only
   MODULE_NAME: ${{ vars.MODULE_NAME }}
   PYTHON_VERSION: ${{ vars.PYTHON_VERSION }}
-  TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing
+  # Use run number and attempt to make stack name unique and avoid collisions
+  TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing-${{ github.run_number }}-${{ github.run_attempt }}
 
 
 # default: least privileged permissions across all jobs
@@ -110,6 +111,32 @@ jobs:
         with:
           name: packaged-testing.yaml
           path: packaged-testing.yaml
+
+      - name: Clean up any existing stack in bad state
+        if: steps.check_template.outputs.exists == 'true'
+        continue-on-error: true
+        run: |
+          # Check if stack exists and its status
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name ${TESTING_STACK_NAME} \
+            --region ${TESTING_REGION} \
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+          if [[ "$STACK_STATUS" == "DELETE_IN_PROGRESS" || "$STACK_STATUS" == "DELETE_FAILED" ]]; then
+            echo "Stack is in $STACK_STATUS state, waiting for deletion to complete..."
+            aws cloudformation wait stack-delete-complete \
+              --stack-name ${TESTING_STACK_NAME} \
+              --region ${TESTING_REGION} || true
+          elif [[ "$STACK_STATUS" == "ROLLBACK_COMPLETE" || "$STACK_STATUS" == "ROLLBACK_FAILED" || "$STACK_STATUS" == "CREATE_FAILED" || "$STACK_STATUS" == "UPDATE_ROLLBACK_COMPLETE" ]]; then
+            echo "Stack is in $STACK_STATUS state, deleting it first..."
+            aws cloudformation delete-stack \
+              --stack-name ${TESTING_STACK_NAME} \
+              --region ${TESTING_REGION}
+            aws cloudformation wait stack-delete-complete \
+              --stack-name ${TESTING_STACK_NAME} \
+              --region ${TESTING_REGION} || true
+          fi
 
       - name: Deploy stack
         if: steps.check_template.outputs.exists == 'true'
