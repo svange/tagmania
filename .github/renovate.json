@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
+  "baseBranches": ["main"],
+  "labels": ["dependencies"],
+  "automerge": true,
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "poetry": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Auto-merge non-major updates",
+      "matchUpdateTypes": ["patch", "minor", "pin", "digest"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+    {
+      "description": "Major updates need review",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "description": "Group by Poetry dependency groups",
+      "matchManagers": ["poetry"],
+      "groupByDepType": true
+    },
+    {
+      "description": "Security group never auto-merges",
+      "matchManagers": ["poetry"],
+      "matchDepGroups": ["security"],
+      "automerge": false
+    }
+  ],
+  "prConcurrentLimit": 3,
+  "prCreation": "immediate",
+  "rebaseWhen": "auto"
+}

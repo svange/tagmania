@@ -18,3 +18,9 @@ report.html
 test-report.html
 .aws-sam/
 docs
+
+CLAUDE*
+Dockerfile
+docker-compose.yml
+Makefile
+pytest.log
