@@ -1,8 +1,65 @@
+"""AWS Cluster Snapshot Management CLI.
+
+This module provides the main CLI interface for creating, restoring, deleting,
+and listing EBS snapshots for EC2 clusters. It supports both full cluster
+operations and targeted operations using regex patterns to match specific instances.
+
+The tool relies on EC2 instances having "Cluster" tags to identify cluster membership
+and "Name" tags for targeted operations. All operations include safety features
+with confirmation prompts to prevent accidental data loss.
+
+Features:
+    - Create named snapshots of entire clusters
+    - Restore clusters from snapshots with volume replacement
+    - Targeted restore using regex patterns on instance names
+    - List and delete existing snapshots
+    - Safety confirmations for all destructive operations
+
+Usage:
+    The module is typically invoked via the cluster-snap CLI command:
+
+    ```bash
+    # Create a backup
+    cluster-snap --backup --name daily-backup production
+
+    # Restore entire cluster
+    cluster-snap --restore --name daily-backup production
+
+    # Targeted restore (only web servers)
+    cluster-snap --restore --target ".*-web-.*" production
+
+    # List snapshots
+    cluster-snap --list production
+
+    # Delete snapshots
+    cluster-snap --delete --name daily-backup production
+    ```
+
+Warning:
+    Restore operations permanently delete existing EBS volumes and replace them
+    with volumes created from snapshots. This operation cannot be undone.
+    Always confirm you have the correct backup before proceeding.
+"""
+
 import argparse
 import re
 from tagmania.iac_tools.clusterset import ClusterSet
 
+
 def main():
+    """Main entry point for the cluster snapshot management CLI.
+
+    Parses command line arguments and executes the appropriate snapshot operation
+    (backup, restore, list, or delete) on the specified cluster.
+
+    The function handles all user interactions including confirmation prompts
+    for destructive operations and provides detailed feedback on operation progress.
+
+    Raises:
+        SystemExit: On invalid command line arguments or user cancellation.
+        ValueError: On invalid regex patterns for targeted operations.
+        AWSError: On AWS API failures during snapshot operations.
+    """
     parser = argparse.ArgumentParser(
         description='AWS cluster snapshot backup and restore tool.',
         epilog='''

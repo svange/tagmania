@@ -1,3 +1,46 @@
+"""ClusterSet - Core AWS EC2 Cluster Management.
+
+This module provides the ClusterSet class, which is the central component for managing
+collections of EC2 instances based on cluster tags. It provides comprehensive
+functionality for cluster operations including instance management, volume operations,
+and snapshot management with built-in safety features.
+
+The ClusterSet class serves as the foundation for all cluster operations in Tagmania,
+offering both simple operations (start/stop instances) and complex operations
+(snapshot creation/restoration with targeted instance filtering).
+
+Key Features:
+    - Tag-based resource identification and management
+    - Instance lifecycle management (start, stop, targeted operations)
+    - EBS volume and snapshot management
+    - Targeted operations using regex pattern matching
+    - Safety limits and automation tracking
+    - Comprehensive logging and error handling
+
+Safety Features:
+    - Maximum item limits to prevent performance issues
+    - Automation key tracking to avoid modifying unmanaged resources
+    - Built-in confirmation and validation mechanisms
+    - Comprehensive error handling and logging
+
+Example:
+    Basic cluster management:
+
+    ```python
+    # Create a cluster set
+    cluster = ClusterSet('production-web')
+
+    # Start all instances
+    cluster.start_instances()
+
+    # Create snapshots
+    cluster.create_snapshots('daily-backup')
+
+    # Targeted operations
+    cluster.stop_instances_targeted('.*-worker-.*')
+    ```
+"""
+
 import datetime
 import time
 import logging
@@ -8,15 +51,51 @@ from .filterset import FilterSet
 
 
 class ClusterSet:
+    """Manages collections of EC2 instances based on cluster tags.
+
+    The ClusterSet class provides comprehensive cluster management functionality
+    including instance lifecycle management, volume operations, and snapshot
+    management. It uses tag-based resource identification to ensure operations
+    only affect intended resources.
+
+    Attributes:
+        cluster_names: The name(s) of the cluster(s) being managed
+        _MAX_ITEMS: Safety limit for collection operations (150)
+        AUTOMATION_KEY: Key used to track managed resources ('SNAPSHOT_MANAGER')
+
+    Note:
+        All operations rely on the "Cluster" tag to identify cluster membership.
+        The class includes built-in safety features to prevent accidental
+        modification of unmanaged resources.
+    """
     def __init__(self, cluster_names, profile=None):
-        """
-        Initialize ClusterSet.
+        """Initialize ClusterSet for managing one or more clusters.
+
+        Creates a new ClusterSet instance for managing EC2 instances and related
+        resources (volumes, snapshots) for the specified cluster(s). Sets up
+        AWS connectivity and initializes safety limits and automation tracking.
 
         Args:
-            - cluster_names - The name of a cluster, or a list of clusters
-            - profile - The AWS profile to use (optional)
-        Returns:
-            none
+            cluster_names: The name of a cluster (str) or list of cluster names (list).
+                         Must match the "Cluster" tag value on EC2 instances.
+            profile: AWS profile name to use for authentication (optional).
+                    If None, uses default AWS credentials chain.
+
+        Example:
+            ```python
+            # Single cluster
+            cluster = ClusterSet('production-web')
+
+            # Multiple clusters
+            clusters = ClusterSet(['prod-web', 'prod-api'])
+
+            # With specific AWS profile
+            cluster = ClusterSet('staging', profile='dev-account')
+            ```
+
+        Note:
+            The cluster names must exactly match the "Cluster" tag values
+            on your EC2 instances for operations to work correctly.
         """
         # Collections operate lazily. Turning a collection into a list can cause
         # performance issues if the collection is very large. Although this is
@@ -64,13 +143,27 @@ class ClusterSet:
         return self._cluster_filter.copy()
 
     def get_instances(self):
-        """
-        Get list of instances associated with a cluster set provided.
+        """Get all EC2 instances belonging to this cluster set.
 
-        Args:
-            none
+        Retrieves all EC2 instances that have a "Cluster" tag matching any of the
+        cluster names specified during initialization. The instances are filtered
+        using the cluster filter and limited by the safety maximum (_MAX_ITEMS).
+
         Returns:
-            list of instances
+            list: List of EC2 instance objects from boto3. Each instance object
+                 contains all AWS instance metadata including ID, state, tags, etc.
+
+        Example:
+            ```python
+            cluster = ClusterSet('production-web')
+            instances = cluster.get_instances()
+            for instance in instances:
+                print(f"Instance {instance.id} is {instance.state['Name']}")
+            ```
+
+        Note:
+            Returns a maximum of _MAX_ITEMS (150) instances for performance protection.
+            If your cluster has more instances, increase this limit or use filtering.
         """
         self._logger.debug("method_call: get_instances")
         fs = FilterSet(self.get_cluster_filter())
@@ -243,13 +336,22 @@ class ClusterSet:
         return cluster_dict
 
     def start_instances(self):
-        """
-        Start instances associated with this cluster.
+        """Start all stopped EC2 instances in this cluster.
 
-        Args:
-            none
-        Returns:
-            none
+        Identifies all instances in the cluster that are currently in 'stopped' state
+        and starts them. Running instances are not affected. The operation processes
+        instances in batches and provides feedback on progress.
+
+        Example:
+            ```python
+            cluster = ClusterSet('production-web')
+            cluster.start_instances()  # Starts all stopped instances
+            ```
+
+        Note:
+            Only instances in 'stopped' state will be started. Instances in other
+            states (running, stopping, etc.) are ignored. The operation may take
+            several minutes for large clusters.
         """
         self._logger.debug("method_call: start_instances")
         instances = self.get_stopped_instances()
