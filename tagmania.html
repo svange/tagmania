@@ -33,6 +33,10 @@
                     <li><a href="tagmania/tag_manager.html">tag_manager</a></li>
             </ul>
 
+            <h2>API Documentation</h2>
+                <ul class="memberlist">
+    </ul>
+
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev" target="_blank">
@@ -47,10 +51,96 @@
                     <h1 class="modulename">
 tagmania    </h1>
 
-                
-                
-                
-                
+                        <div class="docstring"><p>Tagmania - AWS EC2 Cluster Management Tools.</p>
+
+<p>Tagmania provides command-line tools for managing AWS EC2 clusters through tag-based operations.
+It offers utilities for starting, stopping, and creating snapshots of clusters identified by their "Cluster" tag.</p>
+
+<p>Key Features:
+    - Start and stop EC2 instances in clusters
+    - Create, restore, and manage EBS snapshots
+    - Targeted restore operations using regex patterns
+    - Tag-based resource identification and filtering
+    - Safety features with confirmation prompts</p>
+
+<p>Main CLI Commands:
+    - cluster-start: Start all instances in a cluster
+    - cluster-stop: Stop all instances in a cluster
+    - cluster-snap: Create, restore, delete, and list snapshots</p>
+
+<p>Example:
+    Basic usage examples:</p>
+
+<pre><code><div class="pdoc-code codehilite">
+<pre><span></span><code><span class="c1"># Start a cluster</span>
+cluster-start<span class="w"> </span>production-web
+
+<span class="c1"># Create a snapshot backup</span>
+cluster-snap<span class="w"> </span>--backup<span class="w"> </span>--name<span class="w"> </span>daily-backup<span class="w"> </span>production-web
+
+<span class="c1"># Restore from snapshot</span>
+cluster-snap<span class="w"> </span>--restore<span class="w"> </span>--name<span class="w"> </span>daily-backup<span class="w"> </span>production-web
+
+<span class="c1"># Targeted restore (only web servers)</span>
+cluster-snap<span class="w"> </span>--restore<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;.*-web-.*&quot;</span><span class="w"> </span>production-web
+</code></pre>
+</div>
+</code></pre>
+
+<p>Note:
+    All operations require EC2 instances to have a "Cluster" tag for identification.
+    AWS CLI profile configuration is required for authentication.</p>
+</div>
+
+                        <input id="mod-tagmania-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+
+                        <label class="view-source-button" for="mod-tagmania-view-source"><span>View Source</span></label>
+
+                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos"> 1</span></a><span class="sd">&quot;&quot;&quot;Tagmania - AWS EC2 Cluster Management Tools.</span>
+</span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a>
+</span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a><span class="sd">Tagmania provides command-line tools for managing AWS EC2 clusters through tag-based operations.</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a><span class="sd">It offers utilities for starting, stopping, and creating snapshots of clusters identified by their &quot;Cluster&quot; tag.</span>
+</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a>
+</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a><span class="sd">Key Features:</span>
+</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a><span class="sd">    - Start and stop EC2 instances in clusters</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a><span class="sd">    - Create, restore, and manage EBS snapshots</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="sd">    - Targeted restore operations using regex patterns</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a><span class="sd">    - Tag-based resource identification and filtering</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a><span class="sd">    - Safety features with confirmation prompts</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a>
+</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a><span class="sd">Main CLI Commands:</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a><span class="sd">    - cluster-start: Start all instances in a cluster</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a><span class="sd">    - cluster-stop: Stop all instances in a cluster</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a><span class="sd">    - cluster-snap: Create, restore, delete, and list snapshots</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a>
+</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a><span class="sd">Example:</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a><span class="sd">    Basic usage examples:</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a>
+</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a><span class="sd">    ```bash</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a><span class="sd">    # Start a cluster</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a><span class="sd">    cluster-start production-web</span>
+</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a>
+</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a><span class="sd">    # Create a snapshot backup</span>
+</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a><span class="sd">    cluster-snap --backup --name daily-backup production-web</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a>
+</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a><span class="sd">    # Restore from snapshot</span>
+</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a><span class="sd">    cluster-snap --restore --name daily-backup production-web</span>
+</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a>
+</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a><span class="sd">    # Targeted restore (only web servers)</span>
+</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a><span class="sd">    cluster-snap --restore --target &quot;.*-web-.*&quot; production-web</span>
+</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a><span class="sd">    ```</span>
+</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a>
+</span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a><span class="sd">Note:</span>
+</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a><span class="sd">    All operations require EC2 instances to have a &quot;Cluster&quot; tag for identification.</span>
+</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a><span class="sd">    AWS CLI profile configuration is required for authentication.</span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a>
+</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a><span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;2.4.0&quot;</span>
+</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a><span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Samuel Vange&quot;</span>
+</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a><span class="n">__email__</span> <span class="o">=</span> <span class="s2">&quot;7166607+svange@users.noreply.github.com&quot;</span>
+</span></pre></div>
+
+
             </section>
     </main>
 <script>

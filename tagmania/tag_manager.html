@@ -49,104 +49,191 @@
                     <h1 class="modulename">
 <a href="./../tagmania.html">tagmania</a><wbr>.tag_manager    </h1>
 
-                
+                        <div class="docstring"><p>AWS Cluster Tag Management CLI.</p>
+
+<p>This module provides a command-line interface for managing tags on AWS resources
+within a cluster. It supports adding and removing tags from EC2 instances,
+volumes, snapshots, and Lambda functions belonging to a cluster.</p>
+
+<p>The tool processes tag operations in the order specified on the command line,
+allowing for complex tag management scenarios including tag overrides and
+conditional operations.</p>
+
+<p>Features:
+    - Add tags to all resources in a cluster
+    - Remove tags from all resources in a cluster
+    - Support for multiple resource types (instances, volumes, snapshots, Lambda)
+    - Batch operations for efficiency
+    - Tag override capability</p>
+
+<p>Usage:
+    The module is typically invoked via a CLI command for tag management:</p>
+
+<pre><code><div class="pdoc-code codehilite">
+<pre><span></span><code><span class="c1"># Add tags to cluster</span>
+tag-manager<span class="w"> </span>--tag<span class="w"> </span>Environment<span class="w"> </span>production<span class="w"> </span>--tag<span class="w"> </span>Owner<span class="w"> </span>backend-team<span class="w"> </span>cluster-name
+
+<span class="c1"># Remove tags from cluster</span>
+tag-manager<span class="w"> </span>--untag<span class="w"> </span>TempTag<span class="w"> </span>--untag<span class="w"> </span>BuildNumber<span class="w"> </span>cluster-name
+
+<span class="c1"># Override existing tag</span>
+tag-manager<span class="w"> </span>--tag<span class="w"> </span>Environment<span class="w"> </span>staging<span class="w"> </span>cluster-name
+</code></pre>
+</div>
+</code></pre>
+
+<p>Note:
+    Operations are performed in command-line argument order. If a tag is both
+    added and removed in the same command, it will be added first then removed.</p>
+</div>
+
                         <input id="mod-tag_manager-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-tag_manager-view-source"><span>View Source</span></label>
 
-                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos"> 1</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
-</span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">tagmania.iac_tools.clusterset</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClusterSet</span>
-</span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">tagmania.iac_tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">util</span>
-</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a>
-</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
-</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a>        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;AWS cluster tag manager.&#39;</span><span class="p">,</span>
-</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a>        <span class="n">epilog</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
-</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="s1">            This tool relies on the &quot;Cluster&quot; and &quot;Owner&quot; tags on instances and</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a><span class="s1">            volumes. IAC automation puts this in place. Tags are</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a><span class="s1">            dealt with in the order of the parameter arguments:</span>
-</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a><span class="s1">            i.e. if a tag is listed as both a tag and an untag, it will be added</span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a><span class="s1">            and then removed from the resources.</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a><span class="s1">            To override a tag&#39;s value, simply add it as a tag and the value will</span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a><span class="s1">            be overwritten.&#39;&#39;&#39;</span>
-</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a>    <span class="p">)</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-t&#39;</span><span class="p">,</span> <span class="s1">&#39;--tag&#39;</span><span class="p">,</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a>        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
-</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a>        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tag&#39;</span><span class="p">,</span>
-</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a><span class="s1">            Add tags to cluster CLUSTER. Tags must take the form of key:value</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a><span class="s1">            Can add as many tags as desired (AWS has a 50 tag limit), seperated</span>
-</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a><span class="s1">            by spaces.&#39;&#39;&#39;</span>
-</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a>    <span class="p">)</span>
-</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-u&#39;</span><span class="p">,</span> <span class="s1">&#39;--untag&#39;</span><span class="p">,</span>
-</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a>        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
-</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a>        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;untag&#39;</span><span class="p">,</span>
-</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
-</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a><span class="s1">            Remove tags from cluster CLUSTER. Accepts only the key of the tag.</span>
-</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a><span class="s1">            Can remove as many tags as desired, seperated by spaces. If the key</span>
-</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a><span class="s1">            doesn&#39;t exist, ignores.&#39;&#39;&#39;</span>
-</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a>    <span class="p">)</span>
-</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;cluster&#39;</span><span class="p">,</span>
-</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
-</span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a><span class="s1">            the name CLUSTER of the cluster in question. This can be found by</span>
-</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a><span class="s1">            looking at any node in the AWS console and looking for the &quot;Cluster&quot;</span>
-</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a><span class="s1">            tag.&#39;&#39;&#39;</span>
-</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a>    <span class="p">)</span>
-</span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a>
-</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--profile&#39;</span><span class="p">,</span> <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;the AWS profile to use&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a>
-</span><span id="L-43"><a href="#L-43"><span class="linenos">43</span></a>    <span class="n">cluster</span> <span class="o">=</span> <span class="n">ClusterSet</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">profile</span><span class="p">)</span>
-</span><span id="L-44"><a href="#L-44"><span class="linenos">44</span></a>
-</span><span id="L-45"><a href="#L-45"><span class="linenos">45</span></a>    <span class="c1"># Perform tagging operations</span>
-</span><span id="L-46"><a href="#L-46"><span class="linenos">46</span></a>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
-</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a>        <span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
-</span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a>            <span class="n">pair</span> <span class="o">=</span> <span class="n">tag</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
-</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a>            <span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;Key&#39;</span><span class="p">:</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;Value&#39;</span><span class="p">:</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]})</span>
-</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a>
-</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a>        <span class="c1"># Tag EC2 resources</span>
-</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_instances</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_volumes</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="L-55"><a href="#L-55"><span class="linenos">55</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_snapshots</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="L-56"><a href="#L-56"><span class="linenos">56</span></a>        <span class="c1"># cluster.tag_subnet(tags)</span>
-</span><span id="L-57"><a href="#L-57"><span class="linenos">57</span></a>
-</span><span id="L-58"><a href="#L-58"><span class="linenos">58</span></a>        <span class="c1"># Tag lambda functions</span>
-</span><span id="L-59"><a href="#L-59"><span class="linenos">59</span></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Tagging lambda function(s)&quot;</span><span class="p">)</span>
-</span><span id="L-60"><a href="#L-60"><span class="linenos">60</span></a>        <span class="n">lambda_arn</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">get_lambda_arn</span><span class="p">(</span><span class="s2">&quot;TAGMANIA-AUTO-&quot;</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">)</span>
-</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a>        <span class="c1"># Lambda tagging uses an plain dictionary of keys and values</span>
-</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a>        <span class="n">lambda_tags</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
-</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a>            <span class="n">key</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span>
-</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a>            <span class="n">value</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Value&#39;</span><span class="p">]</span>
-</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a>            <span class="n">lambda_tags</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a>        <span class="n">util</span><span class="o">.</span><span class="n">tag_lambda_functions</span><span class="p">([</span><span class="n">lambda_arn</span><span class="p">],</span> <span class="n">lambda_tags</span><span class="p">)</span>
-</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>
-</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>    <span class="c1"># Perform un-tagging operations</span>
-</span><span id="L-70"><a href="#L-70"><span class="linenos">70</span></a>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">untag</span><span class="p">:</span>
-</span><span id="L-71"><a href="#L-71"><span class="linenos">71</span></a>        <span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="L-72"><a href="#L-72"><span class="linenos">72</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">untag</span><span class="p">:</span>
-</span><span id="L-73"><a href="#L-73"><span class="linenos">73</span></a>            <span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;Key&#39;</span><span class="p">:</span> <span class="n">tag</span><span class="p">})</span>
-</span><span id="L-74"><a href="#L-74"><span class="linenos">74</span></a>
-</span><span id="L-75"><a href="#L-75"><span class="linenos">75</span></a>        <span class="c1"># Un-tag EC2 resources</span>
-</span><span id="L-76"><a href="#L-76"><span class="linenos">76</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_instances</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="L-77"><a href="#L-77"><span class="linenos">77</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_volumes</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="L-78"><a href="#L-78"><span class="linenos">78</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_snapshots</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="L-79"><a href="#L-79"><span class="linenos">79</span></a>        <span class="c1"># cluster.untag_subnet(tags)</span>
-</span><span id="L-80"><a href="#L-80"><span class="linenos">80</span></a>
-</span><span id="L-81"><a href="#L-81"><span class="linenos">81</span></a>        <span class="c1"># Un-tag lambda functions</span>
-</span><span id="L-82"><a href="#L-82"><span class="linenos">82</span></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Un-tagging lambda function(s)&quot;</span><span class="p">)</span>
-</span><span id="L-83"><a href="#L-83"><span class="linenos">83</span></a>        <span class="n">lambda_arn</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">get_lambda_arn</span><span class="p">(</span><span class="s2">&quot;TAGMANIA-AUTO-&quot;</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">)</span>
-</span><span id="L-84"><a href="#L-84"><span class="linenos">84</span></a>        <span class="c1"># Lambda un-tagging uses a plain list of keys</span>
-</span><span id="L-85"><a href="#L-85"><span class="linenos">85</span></a>        <span class="n">lambda_keys</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="L-86"><a href="#L-86"><span class="linenos">86</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
-</span><span id="L-87"><a href="#L-87"><span class="linenos">87</span></a>            <span class="n">key</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span>
-</span><span id="L-88"><a href="#L-88"><span class="linenos">88</span></a>            <span class="n">lambda_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-</span><span id="L-89"><a href="#L-89"><span class="linenos">89</span></a>        <span class="n">util</span><span class="o">.</span><span class="n">untag_lambda_functions</span><span class="p">([</span><span class="n">lambda_arn</span><span class="p">],</span> <span class="n">lambda_keys</span><span class="p">)</span>
-</span><span id="L-90"><a href="#L-90"><span class="linenos">90</span></a>
-</span><span id="L-91"><a href="#L-91"><span class="linenos">91</span></a>
-</span><span id="L-92"><a href="#L-92"><span class="linenos">92</span></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-</span><span id="L-93"><a href="#L-93"><span class="linenos">93</span></a>    <span class="n">main</span><span class="p">()</span>
+                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos">  1</span></a><span class="sd">&quot;&quot;&quot;AWS Cluster Tag Management CLI.</span>
+</span><span id="L-2"><a href="#L-2"><span class="linenos">  2</span></a>
+</span><span id="L-3"><a href="#L-3"><span class="linenos">  3</span></a><span class="sd">This module provides a command-line interface for managing tags on AWS resources</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos">  4</span></a><span class="sd">within a cluster. It supports adding and removing tags from EC2 instances,</span>
+</span><span id="L-5"><a href="#L-5"><span class="linenos">  5</span></a><span class="sd">volumes, snapshots, and Lambda functions belonging to a cluster.</span>
+</span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a>
+</span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a><span class="sd">The tool processes tag operations in the order specified on the command line,</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="sd">allowing for complex tag management scenarios including tag overrides and</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="sd">conditional operations.</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="sd">Features:</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="sd">    - Add tags to all resources in a cluster</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="sd">    - Remove tags from all resources in a cluster</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="sd">    - Support for multiple resource types (instances, volumes, snapshots, Lambda)</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="sd">    - Batch operations for efficiency</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="sd">    - Tag override capability</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="sd">Usage:</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a><span class="sd">    The module is typically invoked via a CLI command for tag management:</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a>
+</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="sd">    ```bash</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="sd">    # Add tags to cluster</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="sd">    tag-manager --tag Environment production --tag Owner backend-team cluster-name</span>
+</span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a>
+</span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a><span class="sd">    # Remove tags from cluster</span>
+</span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a><span class="sd">    tag-manager --untag TempTag --untag BuildNumber cluster-name</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a>
+</span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a><span class="sd">    # Override existing tag</span>
+</span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a><span class="sd">    tag-manager --tag Environment staging cluster-name</span>
+</span><span id="L-30"><a href="#L-30"><span class="linenos"> 30</span></a><span class="sd">    ```</span>
+</span><span id="L-31"><a href="#L-31"><span class="linenos"> 31</span></a>
+</span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a><span class="sd">Note:</span>
+</span><span id="L-33"><a href="#L-33"><span class="linenos"> 33</span></a><span class="sd">    Operations are performed in command-line argument order. If a tag is both</span>
+</span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a><span class="sd">    added and removed in the same command, it will be added first then removed.</span>
+</span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-36"><a href="#L-36"><span class="linenos"> 36</span></a>
+</span><span id="L-37"><a href="#L-37"><span class="linenos"> 37</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos"> 38</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">tagmania.iac_tools.clusterset</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClusterSet</span>
+</span><span id="L-39"><a href="#L-39"><span class="linenos"> 39</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">tagmania.iac_tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">util</span>
+</span><span id="L-40"><a href="#L-40"><span class="linenos"> 40</span></a>
+</span><span id="L-41"><a href="#L-41"><span class="linenos"> 41</span></a>
+</span><span id="L-42"><a href="#L-42"><span class="linenos"> 42</span></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+</span><span id="L-43"><a href="#L-43"><span class="linenos"> 43</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point for the cluster tag management CLI.</span>
+</span><span id="L-44"><a href="#L-44"><span class="linenos"> 44</span></a>
+</span><span id="L-45"><a href="#L-45"><span class="linenos"> 45</span></a><span class="sd">    Parses command line arguments and executes tag operations (add/remove)</span>
+</span><span id="L-46"><a href="#L-46"><span class="linenos"> 46</span></a><span class="sd">    on all resources within the specified cluster. Supports both EC2 resources</span>
+</span><span id="L-47"><a href="#L-47"><span class="linenos"> 47</span></a><span class="sd">    (instances, volumes, snapshots) and Lambda functions.</span>
+</span><span id="L-48"><a href="#L-48"><span class="linenos"> 48</span></a>
+</span><span id="L-49"><a href="#L-49"><span class="linenos"> 49</span></a><span class="sd">    The function processes tag operations in the order they appear on the</span>
+</span><span id="L-50"><a href="#L-50"><span class="linenos"> 50</span></a><span class="sd">    command line, allowing for complex tag management scenarios.</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a>
+</span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a><span class="sd">    Raises:</span>
+</span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a><span class="sd">        SystemExit: On invalid command line arguments.</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a><span class="sd">        AWSError: On AWS API failures during tag operations.</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+</span><span id="L-57"><a href="#L-57"><span class="linenos"> 57</span></a>        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;AWS cluster tag manager.&#39;</span><span class="p">,</span>
+</span><span id="L-58"><a href="#L-58"><span class="linenos"> 58</span></a>        <span class="n">epilog</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos"> 59</span></a><span class="s1">            This tool relies on the &quot;Cluster&quot; and &quot;Owner&quot; tags on instances and</span>
+</span><span id="L-60"><a href="#L-60"><span class="linenos"> 60</span></a><span class="s1">            volumes. IAC automation puts this in place. Tags are</span>
+</span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a><span class="s1">            dealt with in the order of the parameter arguments:</span>
+</span><span id="L-62"><a href="#L-62"><span class="linenos"> 62</span></a><span class="s1">            i.e. if a tag is listed as both a tag and an untag, it will be added</span>
+</span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a><span class="s1">            and then removed from the resources.</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a><span class="s1">            To override a tag&#39;s value, simply add it as a tag and the value will</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a><span class="s1">            be overwritten.&#39;&#39;&#39;</span>
+</span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a>    <span class="p">)</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-t&#39;</span><span class="p">,</span> <span class="s1">&#39;--tag&#39;</span><span class="p">,</span>
+</span><span id="L-68"><a href="#L-68"><span class="linenos"> 68</span></a>        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos"> 69</span></a>        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tag&#39;</span><span class="p">,</span>
+</span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+</span><span id="L-71"><a href="#L-71"><span class="linenos"> 71</span></a><span class="s1">            Add tags to cluster CLUSTER. Tags must take the form of key:value</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a><span class="s1">            Can add as many tags as desired (AWS has a 50 tag limit), seperated</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a><span class="s1">            by spaces.&#39;&#39;&#39;</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a>    <span class="p">)</span>
+</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-u&#39;</span><span class="p">,</span> <span class="s1">&#39;--untag&#39;</span><span class="p">,</span>
+</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a>        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a>        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;untag&#39;</span><span class="p">,</span>
+</span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a><span class="s1">            Remove tags from cluster CLUSTER. Accepts only the key of the tag.</span>
+</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a><span class="s1">            Can remove as many tags as desired, seperated by spaces. If the key</span>
+</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a><span class="s1">            doesn&#39;t exist, ignores.&#39;&#39;&#39;</span>
+</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>    <span class="p">)</span>
+</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;cluster&#39;</span><span class="p">,</span>
+</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a><span class="s1">            the name CLUSTER of the cluster in question. This can be found by</span>
+</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a><span class="s1">            looking at any node in the AWS console and looking for the &quot;Cluster&quot;</span>
+</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a><span class="s1">            tag.&#39;&#39;&#39;</span>
+</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>    <span class="p">)</span>
+</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>
+</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--profile&#39;</span><span class="p">,</span> <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;the AWS profile to use&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a>
+</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a>    <span class="n">cluster</span> <span class="o">=</span> <span class="n">ClusterSet</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">profile</span><span class="p">)</span>
+</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a>
+</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a>    <span class="c1"># Perform tagging operations</span>
+</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a>        <span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>            <span class="n">pair</span> <span class="o">=</span> <span class="n">tag</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>            <span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;Key&#39;</span><span class="p">:</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;Value&#39;</span><span class="p">:</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]})</span>
+</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>
+</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>        <span class="c1"># Tag EC2 resources</span>
+</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_instances</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_volumes</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_snapshots</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>        <span class="c1"># cluster.tag_subnet(tags)</span>
+</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>
+</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>        <span class="c1"># Tag lambda functions</span>
+</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Tagging lambda function(s)&quot;</span><span class="p">)</span>
+</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>        <span class="n">lambda_arn</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">get_lambda_arn</span><span class="p">(</span><span class="s2">&quot;TAGMANIA-AUTO-&quot;</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">)</span>
+</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>        <span class="c1"># Lambda tagging uses an plain dictionary of keys and values</span>
+</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>        <span class="n">lambda_tags</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>            <span class="n">key</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span>
+</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a>            <span class="n">value</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Value&#39;</span><span class="p">]</span>
+</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a>            <span class="n">lambda_tags</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a>        <span class="n">util</span><span class="o">.</span><span class="n">tag_lambda_functions</span><span class="p">([</span><span class="n">lambda_arn</span><span class="p">],</span> <span class="n">lambda_tags</span><span class="p">)</span>
+</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a>
+</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a>    <span class="c1"># Perform un-tagging operations</span>
+</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">untag</span><span class="p">:</span>
+</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a>        <span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">untag</span><span class="p">:</span>
+</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>            <span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;Key&#39;</span><span class="p">:</span> <span class="n">tag</span><span class="p">})</span>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a>        <span class="c1"># Un-tag EC2 resources</span>
+</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_instances</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_volumes</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_snapshots</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a>        <span class="c1"># cluster.untag_subnet(tags)</span>
+</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a>
+</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a>        <span class="c1"># Un-tag lambda functions</span>
+</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Un-tagging lambda function(s)&quot;</span><span class="p">)</span>
+</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a>        <span class="n">lambda_arn</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">get_lambda_arn</span><span class="p">(</span><span class="s2">&quot;TAGMANIA-AUTO-&quot;</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">)</span>
+</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a>        <span class="c1"># Lambda un-tagging uses a plain list of keys</span>
+</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a>        <span class="n">lambda_keys</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>            <span class="n">key</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span>
+</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>            <span class="n">lambda_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>        <span class="n">util</span><span class="o">.</span><span class="n">untag_lambda_functions</span><span class="p">([</span><span class="n">lambda_arn</span><span class="p">],</span> <span class="n">lambda_keys</span><span class="p">)</span>
+</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>
+</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>
+</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a>    <span class="n">main</span><span class="p">()</span>
 </span></pre></div>
 
 
@@ -162,95 +249,121 @@
 
     </div>
     <a class="headerlink" href="#main"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="main-6"><a href="#main-6"><span class="linenos"> 6</span></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-</span><span id="main-7"><a href="#main-7"><span class="linenos"> 7</span></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
-</span><span id="main-8"><a href="#main-8"><span class="linenos"> 8</span></a>        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;AWS cluster tag manager.&#39;</span><span class="p">,</span>
-</span><span id="main-9"><a href="#main-9"><span class="linenos"> 9</span></a>        <span class="n">epilog</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
-</span><span id="main-10"><a href="#main-10"><span class="linenos">10</span></a><span class="s1">            This tool relies on the &quot;Cluster&quot; and &quot;Owner&quot; tags on instances and</span>
-</span><span id="main-11"><a href="#main-11"><span class="linenos">11</span></a><span class="s1">            volumes. IAC automation puts this in place. Tags are</span>
-</span><span id="main-12"><a href="#main-12"><span class="linenos">12</span></a><span class="s1">            dealt with in the order of the parameter arguments:</span>
-</span><span id="main-13"><a href="#main-13"><span class="linenos">13</span></a><span class="s1">            i.e. if a tag is listed as both a tag and an untag, it will be added</span>
-</span><span id="main-14"><a href="#main-14"><span class="linenos">14</span></a><span class="s1">            and then removed from the resources.</span>
-</span><span id="main-15"><a href="#main-15"><span class="linenos">15</span></a><span class="s1">            To override a tag&#39;s value, simply add it as a tag and the value will</span>
-</span><span id="main-16"><a href="#main-16"><span class="linenos">16</span></a><span class="s1">            be overwritten.&#39;&#39;&#39;</span>
-</span><span id="main-17"><a href="#main-17"><span class="linenos">17</span></a>    <span class="p">)</span>
-</span><span id="main-18"><a href="#main-18"><span class="linenos">18</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-t&#39;</span><span class="p">,</span> <span class="s1">&#39;--tag&#39;</span><span class="p">,</span>
-</span><span id="main-19"><a href="#main-19"><span class="linenos">19</span></a>        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
-</span><span id="main-20"><a href="#main-20"><span class="linenos">20</span></a>        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tag&#39;</span><span class="p">,</span>
-</span><span id="main-21"><a href="#main-21"><span class="linenos">21</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
-</span><span id="main-22"><a href="#main-22"><span class="linenos">22</span></a><span class="s1">            Add tags to cluster CLUSTER. Tags must take the form of key:value</span>
-</span><span id="main-23"><a href="#main-23"><span class="linenos">23</span></a><span class="s1">            Can add as many tags as desired (AWS has a 50 tag limit), seperated</span>
-</span><span id="main-24"><a href="#main-24"><span class="linenos">24</span></a><span class="s1">            by spaces.&#39;&#39;&#39;</span>
-</span><span id="main-25"><a href="#main-25"><span class="linenos">25</span></a>    <span class="p">)</span>
-</span><span id="main-26"><a href="#main-26"><span class="linenos">26</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-u&#39;</span><span class="p">,</span> <span class="s1">&#39;--untag&#39;</span><span class="p">,</span>
-</span><span id="main-27"><a href="#main-27"><span class="linenos">27</span></a>        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
-</span><span id="main-28"><a href="#main-28"><span class="linenos">28</span></a>        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;untag&#39;</span><span class="p">,</span>
-</span><span id="main-29"><a href="#main-29"><span class="linenos">29</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
-</span><span id="main-30"><a href="#main-30"><span class="linenos">30</span></a><span class="s1">            Remove tags from cluster CLUSTER. Accepts only the key of the tag.</span>
-</span><span id="main-31"><a href="#main-31"><span class="linenos">31</span></a><span class="s1">            Can remove as many tags as desired, seperated by spaces. If the key</span>
-</span><span id="main-32"><a href="#main-32"><span class="linenos">32</span></a><span class="s1">            doesn&#39;t exist, ignores.&#39;&#39;&#39;</span>
-</span><span id="main-33"><a href="#main-33"><span class="linenos">33</span></a>    <span class="p">)</span>
-</span><span id="main-34"><a href="#main-34"><span class="linenos">34</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;cluster&#39;</span><span class="p">,</span>
-</span><span id="main-35"><a href="#main-35"><span class="linenos">35</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
-</span><span id="main-36"><a href="#main-36"><span class="linenos">36</span></a><span class="s1">            the name CLUSTER of the cluster in question. This can be found by</span>
-</span><span id="main-37"><a href="#main-37"><span class="linenos">37</span></a><span class="s1">            looking at any node in the AWS console and looking for the &quot;Cluster&quot;</span>
-</span><span id="main-38"><a href="#main-38"><span class="linenos">38</span></a><span class="s1">            tag.&#39;&#39;&#39;</span>
-</span><span id="main-39"><a href="#main-39"><span class="linenos">39</span></a>    <span class="p">)</span>
-</span><span id="main-40"><a href="#main-40"><span class="linenos">40</span></a>
-</span><span id="main-41"><a href="#main-41"><span class="linenos">41</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--profile&#39;</span><span class="p">,</span> <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;the AWS profile to use&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-</span><span id="main-42"><a href="#main-42"><span class="linenos">42</span></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-</span><span id="main-43"><a href="#main-43"><span class="linenos">43</span></a>
-</span><span id="main-44"><a href="#main-44"><span class="linenos">44</span></a>    <span class="n">cluster</span> <span class="o">=</span> <span class="n">ClusterSet</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">profile</span><span class="p">)</span>
-</span><span id="main-45"><a href="#main-45"><span class="linenos">45</span></a>
-</span><span id="main-46"><a href="#main-46"><span class="linenos">46</span></a>    <span class="c1"># Perform tagging operations</span>
-</span><span id="main-47"><a href="#main-47"><span class="linenos">47</span></a>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
-</span><span id="main-48"><a href="#main-48"><span class="linenos">48</span></a>        <span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="main-49"><a href="#main-49"><span class="linenos">49</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
-</span><span id="main-50"><a href="#main-50"><span class="linenos">50</span></a>            <span class="n">pair</span> <span class="o">=</span> <span class="n">tag</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
-</span><span id="main-51"><a href="#main-51"><span class="linenos">51</span></a>            <span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;Key&#39;</span><span class="p">:</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;Value&#39;</span><span class="p">:</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]})</span>
-</span><span id="main-52"><a href="#main-52"><span class="linenos">52</span></a>
-</span><span id="main-53"><a href="#main-53"><span class="linenos">53</span></a>        <span class="c1"># Tag EC2 resources</span>
-</span><span id="main-54"><a href="#main-54"><span class="linenos">54</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_instances</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="main-55"><a href="#main-55"><span class="linenos">55</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_volumes</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="main-56"><a href="#main-56"><span class="linenos">56</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_snapshots</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="main-57"><a href="#main-57"><span class="linenos">57</span></a>        <span class="c1"># cluster.tag_subnet(tags)</span>
-</span><span id="main-58"><a href="#main-58"><span class="linenos">58</span></a>
-</span><span id="main-59"><a href="#main-59"><span class="linenos">59</span></a>        <span class="c1"># Tag lambda functions</span>
-</span><span id="main-60"><a href="#main-60"><span class="linenos">60</span></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Tagging lambda function(s)&quot;</span><span class="p">)</span>
-</span><span id="main-61"><a href="#main-61"><span class="linenos">61</span></a>        <span class="n">lambda_arn</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">get_lambda_arn</span><span class="p">(</span><span class="s2">&quot;TAGMANIA-AUTO-&quot;</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">)</span>
-</span><span id="main-62"><a href="#main-62"><span class="linenos">62</span></a>        <span class="c1"># Lambda tagging uses an plain dictionary of keys and values</span>
-</span><span id="main-63"><a href="#main-63"><span class="linenos">63</span></a>        <span class="n">lambda_tags</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="main-64"><a href="#main-64"><span class="linenos">64</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
-</span><span id="main-65"><a href="#main-65"><span class="linenos">65</span></a>            <span class="n">key</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span>
-</span><span id="main-66"><a href="#main-66"><span class="linenos">66</span></a>            <span class="n">value</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Value&#39;</span><span class="p">]</span>
-</span><span id="main-67"><a href="#main-67"><span class="linenos">67</span></a>            <span class="n">lambda_tags</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-</span><span id="main-68"><a href="#main-68"><span class="linenos">68</span></a>        <span class="n">util</span><span class="o">.</span><span class="n">tag_lambda_functions</span><span class="p">([</span><span class="n">lambda_arn</span><span class="p">],</span> <span class="n">lambda_tags</span><span class="p">)</span>
-</span><span id="main-69"><a href="#main-69"><span class="linenos">69</span></a>
-</span><span id="main-70"><a href="#main-70"><span class="linenos">70</span></a>    <span class="c1"># Perform un-tagging operations</span>
-</span><span id="main-71"><a href="#main-71"><span class="linenos">71</span></a>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">untag</span><span class="p">:</span>
-</span><span id="main-72"><a href="#main-72"><span class="linenos">72</span></a>        <span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="main-73"><a href="#main-73"><span class="linenos">73</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">untag</span><span class="p">:</span>
-</span><span id="main-74"><a href="#main-74"><span class="linenos">74</span></a>            <span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;Key&#39;</span><span class="p">:</span> <span class="n">tag</span><span class="p">})</span>
-</span><span id="main-75"><a href="#main-75"><span class="linenos">75</span></a>
-</span><span id="main-76"><a href="#main-76"><span class="linenos">76</span></a>        <span class="c1"># Un-tag EC2 resources</span>
-</span><span id="main-77"><a href="#main-77"><span class="linenos">77</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_instances</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="main-78"><a href="#main-78"><span class="linenos">78</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_volumes</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="main-79"><a href="#main-79"><span class="linenos">79</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_snapshots</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
-</span><span id="main-80"><a href="#main-80"><span class="linenos">80</span></a>        <span class="c1"># cluster.untag_subnet(tags)</span>
-</span><span id="main-81"><a href="#main-81"><span class="linenos">81</span></a>
-</span><span id="main-82"><a href="#main-82"><span class="linenos">82</span></a>        <span class="c1"># Un-tag lambda functions</span>
-</span><span id="main-83"><a href="#main-83"><span class="linenos">83</span></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Un-tagging lambda function(s)&quot;</span><span class="p">)</span>
-</span><span id="main-84"><a href="#main-84"><span class="linenos">84</span></a>        <span class="n">lambda_arn</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">get_lambda_arn</span><span class="p">(</span><span class="s2">&quot;TAGMANIA-AUTO-&quot;</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">)</span>
-</span><span id="main-85"><a href="#main-85"><span class="linenos">85</span></a>        <span class="c1"># Lambda un-tagging uses a plain list of keys</span>
-</span><span id="main-86"><a href="#main-86"><span class="linenos">86</span></a>        <span class="n">lambda_keys</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="main-87"><a href="#main-87"><span class="linenos">87</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
-</span><span id="main-88"><a href="#main-88"><span class="linenos">88</span></a>            <span class="n">key</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span>
-</span><span id="main-89"><a href="#main-89"><span class="linenos">89</span></a>            <span class="n">lambda_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-</span><span id="main-90"><a href="#main-90"><span class="linenos">90</span></a>        <span class="n">util</span><span class="o">.</span><span class="n">untag_lambda_functions</span><span class="p">([</span><span class="n">lambda_arn</span><span class="p">],</span> <span class="n">lambda_keys</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="main-43"><a href="#main-43"><span class="linenos"> 43</span></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+</span><span id="main-44"><a href="#main-44"><span class="linenos"> 44</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point for the cluster tag management CLI.</span>
+</span><span id="main-45"><a href="#main-45"><span class="linenos"> 45</span></a>
+</span><span id="main-46"><a href="#main-46"><span class="linenos"> 46</span></a><span class="sd">    Parses command line arguments and executes tag operations (add/remove)</span>
+</span><span id="main-47"><a href="#main-47"><span class="linenos"> 47</span></a><span class="sd">    on all resources within the specified cluster. Supports both EC2 resources</span>
+</span><span id="main-48"><a href="#main-48"><span class="linenos"> 48</span></a><span class="sd">    (instances, volumes, snapshots) and Lambda functions.</span>
+</span><span id="main-49"><a href="#main-49"><span class="linenos"> 49</span></a>
+</span><span id="main-50"><a href="#main-50"><span class="linenos"> 50</span></a><span class="sd">    The function processes tag operations in the order they appear on the</span>
+</span><span id="main-51"><a href="#main-51"><span class="linenos"> 51</span></a><span class="sd">    command line, allowing for complex tag management scenarios.</span>
+</span><span id="main-52"><a href="#main-52"><span class="linenos"> 52</span></a>
+</span><span id="main-53"><a href="#main-53"><span class="linenos"> 53</span></a><span class="sd">    Raises:</span>
+</span><span id="main-54"><a href="#main-54"><span class="linenos"> 54</span></a><span class="sd">        SystemExit: On invalid command line arguments.</span>
+</span><span id="main-55"><a href="#main-55"><span class="linenos"> 55</span></a><span class="sd">        AWSError: On AWS API failures during tag operations.</span>
+</span><span id="main-56"><a href="#main-56"><span class="linenos"> 56</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="main-57"><a href="#main-57"><span class="linenos"> 57</span></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+</span><span id="main-58"><a href="#main-58"><span class="linenos"> 58</span></a>        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;AWS cluster tag manager.&#39;</span><span class="p">,</span>
+</span><span id="main-59"><a href="#main-59"><span class="linenos"> 59</span></a>        <span class="n">epilog</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+</span><span id="main-60"><a href="#main-60"><span class="linenos"> 60</span></a><span class="s1">            This tool relies on the &quot;Cluster&quot; and &quot;Owner&quot; tags on instances and</span>
+</span><span id="main-61"><a href="#main-61"><span class="linenos"> 61</span></a><span class="s1">            volumes. IAC automation puts this in place. Tags are</span>
+</span><span id="main-62"><a href="#main-62"><span class="linenos"> 62</span></a><span class="s1">            dealt with in the order of the parameter arguments:</span>
+</span><span id="main-63"><a href="#main-63"><span class="linenos"> 63</span></a><span class="s1">            i.e. if a tag is listed as both a tag and an untag, it will be added</span>
+</span><span id="main-64"><a href="#main-64"><span class="linenos"> 64</span></a><span class="s1">            and then removed from the resources.</span>
+</span><span id="main-65"><a href="#main-65"><span class="linenos"> 65</span></a><span class="s1">            To override a tag&#39;s value, simply add it as a tag and the value will</span>
+</span><span id="main-66"><a href="#main-66"><span class="linenos"> 66</span></a><span class="s1">            be overwritten.&#39;&#39;&#39;</span>
+</span><span id="main-67"><a href="#main-67"><span class="linenos"> 67</span></a>    <span class="p">)</span>
+</span><span id="main-68"><a href="#main-68"><span class="linenos"> 68</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-t&#39;</span><span class="p">,</span> <span class="s1">&#39;--tag&#39;</span><span class="p">,</span>
+</span><span id="main-69"><a href="#main-69"><span class="linenos"> 69</span></a>        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
+</span><span id="main-70"><a href="#main-70"><span class="linenos"> 70</span></a>        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;tag&#39;</span><span class="p">,</span>
+</span><span id="main-71"><a href="#main-71"><span class="linenos"> 71</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+</span><span id="main-72"><a href="#main-72"><span class="linenos"> 72</span></a><span class="s1">            Add tags to cluster CLUSTER. Tags must take the form of key:value</span>
+</span><span id="main-73"><a href="#main-73"><span class="linenos"> 73</span></a><span class="s1">            Can add as many tags as desired (AWS has a 50 tag limit), seperated</span>
+</span><span id="main-74"><a href="#main-74"><span class="linenos"> 74</span></a><span class="s1">            by spaces.&#39;&#39;&#39;</span>
+</span><span id="main-75"><a href="#main-75"><span class="linenos"> 75</span></a>    <span class="p">)</span>
+</span><span id="main-76"><a href="#main-76"><span class="linenos"> 76</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-u&#39;</span><span class="p">,</span> <span class="s1">&#39;--untag&#39;</span><span class="p">,</span>
+</span><span id="main-77"><a href="#main-77"><span class="linenos"> 77</span></a>        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
+</span><span id="main-78"><a href="#main-78"><span class="linenos"> 78</span></a>        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;untag&#39;</span><span class="p">,</span>
+</span><span id="main-79"><a href="#main-79"><span class="linenos"> 79</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+</span><span id="main-80"><a href="#main-80"><span class="linenos"> 80</span></a><span class="s1">            Remove tags from cluster CLUSTER. Accepts only the key of the tag.</span>
+</span><span id="main-81"><a href="#main-81"><span class="linenos"> 81</span></a><span class="s1">            Can remove as many tags as desired, seperated by spaces. If the key</span>
+</span><span id="main-82"><a href="#main-82"><span class="linenos"> 82</span></a><span class="s1">            doesn&#39;t exist, ignores.&#39;&#39;&#39;</span>
+</span><span id="main-83"><a href="#main-83"><span class="linenos"> 83</span></a>    <span class="p">)</span>
+</span><span id="main-84"><a href="#main-84"><span class="linenos"> 84</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;cluster&#39;</span><span class="p">,</span>
+</span><span id="main-85"><a href="#main-85"><span class="linenos"> 85</span></a>        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;</span>
+</span><span id="main-86"><a href="#main-86"><span class="linenos"> 86</span></a><span class="s1">            the name CLUSTER of the cluster in question. This can be found by</span>
+</span><span id="main-87"><a href="#main-87"><span class="linenos"> 87</span></a><span class="s1">            looking at any node in the AWS console and looking for the &quot;Cluster&quot;</span>
+</span><span id="main-88"><a href="#main-88"><span class="linenos"> 88</span></a><span class="s1">            tag.&#39;&#39;&#39;</span>
+</span><span id="main-89"><a href="#main-89"><span class="linenos"> 89</span></a>    <span class="p">)</span>
+</span><span id="main-90"><a href="#main-90"><span class="linenos"> 90</span></a>
+</span><span id="main-91"><a href="#main-91"><span class="linenos"> 91</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--profile&#39;</span><span class="p">,</span> <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;the AWS profile to use&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="main-92"><a href="#main-92"><span class="linenos"> 92</span></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</span><span id="main-93"><a href="#main-93"><span class="linenos"> 93</span></a>
+</span><span id="main-94"><a href="#main-94"><span class="linenos"> 94</span></a>    <span class="n">cluster</span> <span class="o">=</span> <span class="n">ClusterSet</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">profile</span><span class="p">)</span>
+</span><span id="main-95"><a href="#main-95"><span class="linenos"> 95</span></a>
+</span><span id="main-96"><a href="#main-96"><span class="linenos"> 96</span></a>    <span class="c1"># Perform tagging operations</span>
+</span><span id="main-97"><a href="#main-97"><span class="linenos"> 97</span></a>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+</span><span id="main-98"><a href="#main-98"><span class="linenos"> 98</span></a>        <span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="main-99"><a href="#main-99"><span class="linenos"> 99</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+</span><span id="main-100"><a href="#main-100"><span class="linenos">100</span></a>            <span class="n">pair</span> <span class="o">=</span> <span class="n">tag</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+</span><span id="main-101"><a href="#main-101"><span class="linenos">101</span></a>            <span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;Key&#39;</span><span class="p">:</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;Value&#39;</span><span class="p">:</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]})</span>
+</span><span id="main-102"><a href="#main-102"><span class="linenos">102</span></a>
+</span><span id="main-103"><a href="#main-103"><span class="linenos">103</span></a>        <span class="c1"># Tag EC2 resources</span>
+</span><span id="main-104"><a href="#main-104"><span class="linenos">104</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_instances</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="main-105"><a href="#main-105"><span class="linenos">105</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_volumes</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="main-106"><a href="#main-106"><span class="linenos">106</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">tag_snapshots</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="main-107"><a href="#main-107"><span class="linenos">107</span></a>        <span class="c1"># cluster.tag_subnet(tags)</span>
+</span><span id="main-108"><a href="#main-108"><span class="linenos">108</span></a>
+</span><span id="main-109"><a href="#main-109"><span class="linenos">109</span></a>        <span class="c1"># Tag lambda functions</span>
+</span><span id="main-110"><a href="#main-110"><span class="linenos">110</span></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Tagging lambda function(s)&quot;</span><span class="p">)</span>
+</span><span id="main-111"><a href="#main-111"><span class="linenos">111</span></a>        <span class="n">lambda_arn</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">get_lambda_arn</span><span class="p">(</span><span class="s2">&quot;TAGMANIA-AUTO-&quot;</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">)</span>
+</span><span id="main-112"><a href="#main-112"><span class="linenos">112</span></a>        <span class="c1"># Lambda tagging uses an plain dictionary of keys and values</span>
+</span><span id="main-113"><a href="#main-113"><span class="linenos">113</span></a>        <span class="n">lambda_tags</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="main-114"><a href="#main-114"><span class="linenos">114</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+</span><span id="main-115"><a href="#main-115"><span class="linenos">115</span></a>            <span class="n">key</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span>
+</span><span id="main-116"><a href="#main-116"><span class="linenos">116</span></a>            <span class="n">value</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Value&#39;</span><span class="p">]</span>
+</span><span id="main-117"><a href="#main-117"><span class="linenos">117</span></a>            <span class="n">lambda_tags</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+</span><span id="main-118"><a href="#main-118"><span class="linenos">118</span></a>        <span class="n">util</span><span class="o">.</span><span class="n">tag_lambda_functions</span><span class="p">([</span><span class="n">lambda_arn</span><span class="p">],</span> <span class="n">lambda_tags</span><span class="p">)</span>
+</span><span id="main-119"><a href="#main-119"><span class="linenos">119</span></a>
+</span><span id="main-120"><a href="#main-120"><span class="linenos">120</span></a>    <span class="c1"># Perform un-tagging operations</span>
+</span><span id="main-121"><a href="#main-121"><span class="linenos">121</span></a>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">untag</span><span class="p">:</span>
+</span><span id="main-122"><a href="#main-122"><span class="linenos">122</span></a>        <span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="main-123"><a href="#main-123"><span class="linenos">123</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">untag</span><span class="p">:</span>
+</span><span id="main-124"><a href="#main-124"><span class="linenos">124</span></a>            <span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;Key&#39;</span><span class="p">:</span> <span class="n">tag</span><span class="p">})</span>
+</span><span id="main-125"><a href="#main-125"><span class="linenos">125</span></a>
+</span><span id="main-126"><a href="#main-126"><span class="linenos">126</span></a>        <span class="c1"># Un-tag EC2 resources</span>
+</span><span id="main-127"><a href="#main-127"><span class="linenos">127</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_instances</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="main-128"><a href="#main-128"><span class="linenos">128</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_volumes</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="main-129"><a href="#main-129"><span class="linenos">129</span></a>        <span class="n">cluster</span><span class="o">.</span><span class="n">untag_snapshots</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+</span><span id="main-130"><a href="#main-130"><span class="linenos">130</span></a>        <span class="c1"># cluster.untag_subnet(tags)</span>
+</span><span id="main-131"><a href="#main-131"><span class="linenos">131</span></a>
+</span><span id="main-132"><a href="#main-132"><span class="linenos">132</span></a>        <span class="c1"># Un-tag lambda functions</span>
+</span><span id="main-133"><a href="#main-133"><span class="linenos">133</span></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Un-tagging lambda function(s)&quot;</span><span class="p">)</span>
+</span><span id="main-134"><a href="#main-134"><span class="linenos">134</span></a>        <span class="n">lambda_arn</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">get_lambda_arn</span><span class="p">(</span><span class="s2">&quot;TAGMANIA-AUTO-&quot;</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">)</span>
+</span><span id="main-135"><a href="#main-135"><span class="linenos">135</span></a>        <span class="c1"># Lambda un-tagging uses a plain list of keys</span>
+</span><span id="main-136"><a href="#main-136"><span class="linenos">136</span></a>        <span class="n">lambda_keys</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="main-137"><a href="#main-137"><span class="linenos">137</span></a>        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+</span><span id="main-138"><a href="#main-138"><span class="linenos">138</span></a>            <span class="n">key</span> <span class="o">=</span> <span class="n">tag</span><span class="p">[</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span>
+</span><span id="main-139"><a href="#main-139"><span class="linenos">139</span></a>            <span class="n">lambda_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+</span><span id="main-140"><a href="#main-140"><span class="linenos">140</span></a>        <span class="n">util</span><span class="o">.</span><span class="n">untag_lambda_functions</span><span class="p">([</span><span class="n">lambda_arn</span><span class="p">],</span> <span class="n">lambda_keys</span><span class="p">)</span>
 </span></pre></div>
 
 
-    
+            <div class="docstring"><p>Main entry point for the cluster tag management CLI.</p>
+
+<p>Parses command line arguments and executes tag operations (add/remove)
+on all resources within the specified cluster. Supports both EC2 resources
+(instances, volumes, snapshots) and Lambda functions.</p>
+
+<p>The function processes tag operations in the order they appear on the
+command line, allowing for complex tag management scenarios.</p>
+
+<p>Raises:
+    SystemExit: On invalid command line arguments.
+    AWSError: On AWS API failures during tag operations.</p>
+</div>
+
 
                 </section>
     </main>
