@@ -368,7 +368,7 @@ jobs:
           if-no-files-found: error
 
   generate-and-deploy-docs-site:
-    if: github.ref == 'refs/heads/main'
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     name: Generate documentation, gather test results and changelog, and deploy to GitHub Pages
     needs: release-version
     runs-on: ubuntu-latest
@@ -445,6 +445,8 @@ jobs:
     #    and it won't require reversing the release.
     name: Upload release to PyPI or TestPyPI
     runs-on: ubuntu-latest
+    # Only run on push to main or dev branches, not on PRs
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
     environment:
       name: pypi
       url: https://pypi.org/p/${{ github.event.repository.name }}
