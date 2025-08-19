@@ -20,7 +20,7 @@
       "platformAutomerge": true
     },
     {
-      "description": "Major updates need review",
+      "description": "Major updatkes need review",
       "matchUpdateTypes": ["major"],
       "automerge": false
     },
