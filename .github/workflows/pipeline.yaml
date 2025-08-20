@@ -1,4 +1,4 @@
-name: Augmenting Integrations 🐍 Continuous Delivery
+name: Python 🐍 CI/CD Pipeline
 
 on:
   push:
