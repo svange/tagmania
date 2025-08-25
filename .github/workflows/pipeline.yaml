@@ -275,7 +275,22 @@ jobs:
         if: steps.check_template.outputs.exists == 'true'
         continue-on-error: true
         run: |
-          # Check if stack exists and its status
+          # Clean up old test stacks to avoid resource limits
+          echo "Cleaning up old test stacks..."
+          OLD_STACKS=$(aws cloudformation describe-stacks \
+            --region ${TESTING_REGION} \
+            --query "Stacks[?contains(StackName, 'tagmania-testing') && StackName != '${TESTING_STACK_NAME}'].StackName" \
+            --output text 2>/dev/null || true)
+
+          if [ ! -z "$OLD_STACKS" ]; then
+            for stack in $OLD_STACKS; do
+              echo "Deleting old stack: $stack"
+              aws cloudformation delete-stack --stack-name "$stack" --region ${TESTING_REGION} || true
+            done
+            # Don't wait for all deletions, just proceed
+          fi
+
+          # Check if current stack exists and its status
           STACK_STATUS=$(aws cloudformation describe-stacks \
             --stack-name ${TESTING_STACK_NAME} \
             --region ${TESTING_REGION} \
