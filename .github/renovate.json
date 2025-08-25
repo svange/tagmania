@@ -2,27 +2,54 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
-    ":dependencyDashboard"
+    ":dependencyDashboard",
+    "schedule:weekly"
   ],
   "baseBranches": ["main"],
   "labels": ["dependencies"],
-  "automerge": true,
+  "schedule": ["before 3am on Monday"],
+  "timezone": "UTC",
+  "automerge": false,
   "automergeType": "pr",
   "platformAutomerge": true,
+  "branchPrefix": "fix/",
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "automerge": true
+  },
   "poetry": {
     "enabled": true
   },
   "packageRules": [
     {
-      "description": "Auto-merge non-major updates",
-      "matchUpdateTypes": ["patch", "minor", "pin", "digest"],
+      "description": "Auto-merge security updates",
+      "matchDatasources": ["npm", "pypi"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "matchDepTypes": ["devDependencies", "dependencies"],
+      "matchPackagePatterns": ["*"],
+      "matchManagers": ["poetry", "npm", "pip_requirements", "pip_setup"],
       "automerge": true,
-      "platformAutomerge": true
+      "platformAutomerge": true,
+      "vulnerabilityAlerts": {
+        "enabled": true,
+        "automerge": true
+      },
+      "labels": ["security", "automerge"],
+      "branchPrefix": "fix/security-"
     },
     {
-      "description": "Major updatkes need review",
+      "description": "Auto-merge patch and minor updates",
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "platformAutomerge": true,
+      "branchPrefix": "fix/"
+    },
+    {
+      "description": "Major updates need review",
       "matchUpdateTypes": ["major"],
-      "automerge": false
+      "automerge": false,
+      "branchPrefix": "fix/major-"
     },
     {
       "description": "Group by Poetry dependency groups",
@@ -30,13 +57,20 @@
       "groupByDepType": true
     },
     {
-      "description": "Security group never auto-merges",
-      "matchManagers": ["poetry"],
-      "matchDepGroups": ["security"],
-      "automerge": false
+      "description": "Security vulnerabilities always automerge",
+      "matchVulnerabilityAlerts": true,
+      "automerge": true,
+      "platformAutomerge": true,
+      "branchPrefix": "fix/security-",
+      "labels": ["security", "automerge"],
+      "prPriority": 10
     }
   ],
-  "prConcurrentLimit": 3,
+  "prConcurrentLimit": 5,
   "prCreation": "immediate",
-  "rebaseWhen": "auto"
+  "rebaseWhen": "auto",
+  "rangeStrategy": "auto",
+  "semanticCommits": "enabled",
+  "semanticCommitType": "fix",
+  "semanticCommitScope": "deps"
 }
