@@ -275,7 +275,7 @@ jobs:
         if: steps.check_template.outputs.exists == 'true'
         continue-on-error: true
         run: |
-          # Check if stack exists and its status
+          # Check if current stack exists and its status
           STACK_STATUS=$(aws cloudformation describe-stacks \
             --stack-name ${TESTING_STACK_NAME} \
             --region ${TESTING_REGION} \
