@@ -1,5 +1,9 @@
 import pytest
+import time
+import logging
 from tagmania.iac_tools.clusterset import ClusterSet
+
+logger = logging.getLogger(__name__)
 
 class TestBasicClusterOperations:
     """
@@ -12,50 +16,65 @@ class TestBasicClusterOperations:
         """ClusterSet for test1 cluster (1 instance)"""
         return ClusterSet('test1')
 
-    def test_clusterset_stop(self, cluster):
+    def test_clusterset_stop(self, cluster, retry_helper):
         """
         Test the ClusterSet class stop_instances method.
         """
-        cluster.stop_instances()
+        retry_helper.retry_operation(cluster.stop_instances)
+        time.sleep(2)  # Give AWS time to process
 
-    def test_clusterset_start(self, cluster):
+    def test_clusterset_start(self, cluster, retry_helper):
         """
         Test the ClusterSet class start_instances method.
         """
-        cluster.start_instances()
+        retry_helper.retry_operation(cluster.start_instances)
+        time.sleep(2)  # Give AWS time to process
 
     @pytest.mark.slow
-    def test_snapshot_backup(self, cluster):
+    @pytest.mark.aws_intensive
+    def test_snapshot_backup(self, cluster, retry_helper):
         """
         Test the snapshot backup script.
         """
+        retry_helper.retry_operation(cluster.stop_instances)
+        time.sleep(10)  # Wait for instances to fully stop
 
-        cluster.stop_instances()
-        cluster.create_snapshots('test-basic')
+        # Add delay to avoid snapshot rate limit
+        time.sleep(5)
+        retry_helper.retry_operation(cluster.create_snapshots, snapshot_name='test-basic')
 
     @pytest.mark.slow
-    def test_snapshot_restore(self, cluster):
+    @pytest.mark.aws_intensive
+    def test_snapshot_restore(self, cluster, retry_helper):
         """
         Test the snapshot restore script.
         """
+        retry_helper.retry_operation(cluster.stop_instances)
+        time.sleep(10)  # Wait for instances to fully stop
 
-        cluster.stop_instances()
-        cluster.detach_volumes()
-        cluster.delete_volumes()
+        retry_helper.retry_operation(cluster.detach_volumes)
+        time.sleep(5)  # Wait for volumes to detach
+
+        retry_helper.retry_operation(cluster.delete_volumes)
+        time.sleep(5)  # Wait for volumes to delete
+
         # Create new volumes from snapshots and attach them
-        cluster.create_volumes('test-basic')
-        cluster.attach_volumes('test-basic')
+        retry_helper.retry_operation(cluster.create_volumes, snapshot_name='test-basic')
+        time.sleep(5)  # Wait for volumes to be created
 
-    def test_snapshot_delete(self, cluster):
+        retry_helper.retry_operation(cluster.attach_volumes, snapshot_name='test-basic')
+
+    def test_snapshot_delete(self, cluster, retry_helper):
         """
         Test the snapshot delete script.
         """
-        cluster.delete_snapshots('test-basic')
+        retry_helper.retry_operation(cluster.delete_snapshots, snapshot_name='test-basic')
 
-    def test_cleanup_after_tests(self, cluster):
+    def test_cleanup_after_tests(self, cluster, retry_helper):
         """Cleanup test resources"""
         # Ensure instances are running for next tests
-        cluster.start_instances()
+        retry_helper.retry_operation(cluster.start_instances)
+        time.sleep(5)  # Give AWS time to stabilize
 
         # Delete any test snapshots that might remain
         try:
