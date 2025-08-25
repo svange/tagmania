@@ -30,6 +30,12 @@ isort = "^6.0.1"
 pdoc = "^15.0.4"
 pytest-click = "^1.1.0"
 
+[tool.poetry.group.security.dependencies]
+bandit = {extras = ["toml"], version = "^1.8.6"}
+safety = "^3.6.0"
+pip-audit = "^2.9.0"
+semgrep = "<1.100"
+
 [project.scripts]
 cluster-start = "tagmania.start_cluster:main"
 cluster-stop = "tagmania.stop_cluster:main"
