@@ -1,0 +1,14 @@
+[bandit]
+# Directories to scan
+targets = src/
+
+# Tests to skip
+# B101 assert_used - Asserts are acceptable in tests
+# B603 subprocess_without_shell_equals_true - We use subprocess safely
+skips = B101,B603
+
+# Exclude test directories
+exclude_dirs = tests/,test/,*/test/*,*/tests/*
+
+# Report only medium and high severity issues
+severity = medium

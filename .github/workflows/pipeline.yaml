@@ -53,6 +53,164 @@ jobs:
         run: |
           pre-commit run --all-files --show-diff-on-failure
 
+  security-scan:
+    name: Security scanning
+    runs-on: ubuntu-latest
+    needs: [run-pre-commit-tests]
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-security-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root --with security
+
+      - name: Install project
+        run: poetry install --no-interaction --with security
+
+      - name: Generate Bandit report
+        run: |
+          poetry run bandit -r src/ -f json -o bandit-report.json || echo '{"errors": [], "results": [], "metrics": {"_totals": {"nosec": 0, "skipped_tests": 0}}}' > bandit-report.json
+        continue-on-error: true
+
+      - name: Run Bandit security scan (enforced)
+        run: |
+          poetry run bandit -r src/ -ll  # Only fail on medium and high severity issues
+
+      - name: Generate Safety report
+        run: |
+          # Safety can output HTML instead of JSON in some cases, so we handle both
+          poetry run safety check --json --output safety-report.json || echo '{"vulnerabilities": [], "scan_type": "safety", "error": "Safety scan completed with no vulnerabilities or failed to generate JSON"}' > safety-report.json
+        continue-on-error: true
+
+      - name: Run Safety check (enforced)
+        run: |
+          poetry run safety check
+
+      - name: Generate pip-audit report
+        run: |
+          poetry run pip-audit --desc --format json --output pip-audit-report.json || echo '{"dependencies": [], "vulnerabilities": []}' > pip-audit-report.json
+        continue-on-error: true
+
+      - name: Run pip-audit (enforced)
+        run: |
+          poetry run pip-audit --desc
+
+      - name: Generate Semgrep report
+        run: |
+          poetry run semgrep --config=auto --json --output=semgrep-report.json src/ || echo '{"results": [], "errors": []}' > semgrep-report.json
+        continue-on-error: true
+
+      - name: Run Semgrep scan (enforced)
+        run: |
+          poetry run semgrep --config=auto src/
+
+      - name: Generate HTML reports from JSON
+        run: |
+          # Create a simple HTML wrapper for JSON reports
+          cat > security-reports.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Security Scan Results</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 20px; background: #0d1117; color: #c9d1d9; }
+                  .report { margin: 20px 0; padding: 15px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; }
+                  .report h2 { color: #58a6ff; margin-top: 0; }
+                  pre { background: #0d1117; padding: 10px; border-radius: 4px; overflow-x: auto; border: 1px solid #30363d; }
+                  .error { color: #ff7b72; }
+                  .warning { color: #ffa657; }
+                  .info { color: #79c0ff; }
+              </style>
+          </head>
+          <body>
+              <h1>Security Scan Results</h1>
+
+              <div class="report">
+                  <h2>🔍 Bandit Security Scan</h2>
+                  <p>Python security issues detected by Bandit:</p>
+                  <pre id="bandit-content">Loading...</pre>
+              </div>
+
+              <div class="report">
+                  <h2>🚨 Safety Vulnerability Check</h2>
+                  <p>Known vulnerabilities in dependencies:</p>
+                  <pre id="safety-content">Loading...</pre>
+              </div>
+
+              <div class="report">
+                  <h2>🔧 Pip-Audit Results</h2>
+                  <p>Package vulnerability audit:</p>
+                  <pre id="audit-content">Loading...</pre>
+              </div>
+
+              <div class="report">
+                  <h2>🎯 Semgrep Analysis</h2>
+                  <p>Static code analysis findings:</p>
+                  <pre id="semgrep-content">Loading...</pre>
+              </div>
+
+              <script>
+                  // Load and display JSON reports
+                  const reports = [
+                      {id: 'bandit-content', file: 'bandit-report.json'},
+                      {id: 'safety-content', file: 'safety-report.json'},
+                      {id: 'audit-content', file: 'pip-audit-report.json'},
+                      {id: 'semgrep-content', file: 'semgrep-report.json'}
+                  ];
+
+                  reports.forEach(report => {
+                      fetch(report.file)
+                          .then(response => response.json())
+                          .then(data => {
+                              document.getElementById(report.id).textContent = JSON.stringify(data, null, 2);
+                          })
+                          .catch(error => {
+                              document.getElementById(report.id).textContent = 'Error loading report: ' + error;
+                              document.getElementById(report.id).className = 'error';
+                          });
+                  });
+              </script>
+          </body>
+          </html>
+          EOF
+        continue-on-error: true
+
+      - name: Upload security scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-results
+          path: |
+            bandit-report.json
+            safety-report.json
+            pip-audit-report.json
+            semgrep-report.json
+            security-reports.html
+
   deploy-infrastructure:
     permissions:
       id-token: write
@@ -60,6 +218,7 @@ jobs:
 
     name: Deploy test infrastructure (if template.yaml exists)
     runs-on: ubuntu-latest
+    needs: [security-scan]
 
     steps:
       - uses: actions/checkout@v4
@@ -162,7 +321,7 @@ jobs:
       contents: read
 
     name: Run pytest CI/CD tests
-    needs: deploy-infrastructure
+    needs: [security-scan, deploy-infrastructure]
     strategy:
       matrix:
         #        python-version: [ "3.10", "3.11" ]
@@ -285,7 +444,7 @@ jobs:
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} || echo "Stack may not exist or already deleted"
 
   release-version:
-    needs: [ run-pre-commit-tests, run-tests ]
+    needs: [ run-pre-commit-tests, security-scan, run-tests ]
     name: Semantic Version Release
     runs-on: ubuntu-latest
     # Only run semantic release on push to main or dev branches, not on PRs
