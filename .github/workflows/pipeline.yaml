@@ -271,63 +271,31 @@ jobs:
           name: packaged-testing.yaml
           path: packaged-testing.yaml
 
-      - name: Deep cleanup of AWS test resources
+      - name: Clean up any existing stack in bad state
         if: steps.check_template.outputs.exists == 'true'
         continue-on-error: true
         run: |
-          # Perform aggressive cleanup to free up AWS resources
-          echo "Performing deep cleanup of AWS test resources..."
-
-          # First, delete ALL old test stacks
-          echo "Finding and deleting ALL tagmania test stacks..."
-          ALL_TEST_STACKS=$(aws cloudformation describe-stacks \
+          # Check if current stack exists and its status
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name ${TESTING_STACK_NAME} \
             --region ${TESTING_REGION} \
-            --query "Stacks[?contains(StackName, 'tagmania-testing')].StackName" \
-            --output text 2>/dev/null || true)
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
 
-          if [ ! -z "$ALL_TEST_STACKS" ]; then
-            for stack in $ALL_TEST_STACKS; do
-              echo "Deleting test stack: $stack"
-              aws cloudformation delete-stack --stack-name "$stack" --region ${TESTING_REGION} || true
-            done
-
-            # Wait for all deletions
-            for stack in $ALL_TEST_STACKS; do
-              echo "Waiting for $stack deletion..."
-              aws cloudformation wait stack-delete-complete --stack-name "$stack" --region ${TESTING_REGION} 2>/dev/null || true
-            done
+          if [[ "$STACK_STATUS" == "DELETE_IN_PROGRESS" || "$STACK_STATUS" == "DELETE_FAILED" ]]; then
+            echo "Stack is in $STACK_STATUS state, waiting for deletion to complete..."
+            aws cloudformation wait stack-delete-complete \
+              --stack-name ${TESTING_STACK_NAME} \
+              --region ${TESTING_REGION} || true
+          elif [[ "$STACK_STATUS" == "ROLLBACK_COMPLETE" || "$STACK_STATUS" == "ROLLBACK_FAILED" || "$STACK_STATUS" == "CREATE_FAILED" || "$STACK_STATUS" == "UPDATE_ROLLBACK_COMPLETE" ]]; then
+            echo "Stack is in $STACK_STATUS state, deleting it first..."
+            aws cloudformation delete-stack \
+              --stack-name ${TESTING_STACK_NAME} \
+              --region ${TESTING_REGION}
+            aws cloudformation wait stack-delete-complete \
+              --stack-name ${TESTING_STACK_NAME} \
+              --region ${TESTING_REGION} || true
           fi
-
-          # Clean up orphaned VPCs and IGWs with tagmania tags
-          echo "Cleaning up orphaned VPCs and Internet Gateways..."
-
-          # Find VPCs with tagmania in their stack name tag
-          ORPHAN_VPCS=$(aws ec2 describe-vpcs --region ${TESTING_REGION} \
-            --filters "Name=tag-key,Values=aws:cloudformation:stack-name" \
-            --query "Vpcs[?Tags[?contains(Value, 'tagmania')]].VpcId" \
-            --output text 2>/dev/null || true)
-
-          if [ ! -z "$ORPHAN_VPCS" ]; then
-            for vpc in $ORPHAN_VPCS; do
-              echo "Cleaning up orphaned VPC: $vpc"
-
-              # Detach and delete IGWs
-              IGW=$(aws ec2 describe-internet-gateways --region ${TESTING_REGION} \
-                --filters "Name=attachment.vpc-id,Values=$vpc" \
-                --query "InternetGateways[0].InternetGatewayId" \
-                --output text 2>/dev/null || true)
-
-              if [ ! -z "$IGW" ] && [ "$IGW" != "None" ]; then
-                echo "  Detaching and deleting IGW: $IGW"
-                aws ec2 detach-internet-gateway --region ${TESTING_REGION} \
-                  --internet-gateway-id "$IGW" --vpc-id "$vpc" 2>/dev/null || true
-                aws ec2 delete-internet-gateway --region ${TESTING_REGION} \
-                  --internet-gateway-id "$IGW" 2>/dev/null || true
-              fi
-            done
-          fi
-
-          echo "Deep cleanup complete"
 
       - name: Deploy stack
         if: steps.check_template.outputs.exists == 'true'
