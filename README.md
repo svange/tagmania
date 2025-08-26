@@ -16,8 +16,26 @@
 
 ## 📚 Project Resources
 
-| [📖 Current Documentation](https://svange.github.io/tagmania) |[🧪 Test report for last release ](https://svange.github.io/tagmania/test-report.html) |
-|:----------------------------------------------------------------:|:-------------------------------------------------------------------------------------------:|
+| [📖 Current Documentation](https://svange.github.io/tagmania) | [🧪 Test Report](https://svange.github.io/tagmania/test-report.html) |
+|:----------------------------------------------------------------:|:------------------------------------------------------------------------:|
+
+### Pipeline Artifacts
+
+The CI/CD pipeline generates the following artifacts for each run:
+
+| Artifact | Description | When Generated |
+|----------|-------------|----------------|
+| **security-scan-results** | Security analysis reports including:<br>• `bandit-report.json` - Python security issues<br>• `safety-report.json` - Known vulnerabilities in dependencies<br>• `pip-audit-report.json` - Package vulnerability audit<br>• `semgrep-report.json` - Static code analysis<br>• `security-reports.html` - Combined HTML report | Every pipeline run |
+| **test-html** | `test-report.html` - Pytest results with coverage | After test execution |
+| **test-output** | `pytest.log` - Detailed test execution logs | After test execution |
+| **distribution-artifacts** | Python package distribution files in `dist/` | On release to main/dev |
+| **packaged-testing.yaml** | Processed SAM template for test infrastructure | When deploying infrastructure |
+
+To download artifacts:
+1. Go to the [Actions tab](https://github.com/svange/tagmania/actions)
+2. Select a workflow run
+3. Scroll to "Artifacts" section at the bottom
+4. Click on any artifact to download
 
 ---
 
