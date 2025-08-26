@@ -22,8 +22,8 @@ env:
   # For Pipeline Only
   MODULE_NAME: ${{ vars.MODULE_NAME }}
   PYTHON_VERSION: ${{ vars.PYTHON_VERSION }}
-  # Use run number and attempt to make stack name unique and avoid collisions
-  TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing-${{ github.run_number }}-${{ github.run_attempt }}
+  # Static stack name - one testing environment for the project
+  TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing
 
 
 # default: least privileged permissions across all jobs
