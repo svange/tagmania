@@ -22,9 +22,13 @@ env:
   # For Pipeline Only
   MODULE_NAME: ${{ vars.MODULE_NAME }}
   PYTHON_VERSION: ${{ vars.PYTHON_VERSION }}
-  # Use run number and attempt to make stack name unique and avoid collisions
-  TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing-${{ github.run_number }}-${{ github.run_attempt }}
+  # Static stack name - one testing environment for the project
+  TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing
 
+# Concurrency control to prevent simultaneous deployments
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 # default: least privileged permissions across all jobs
 permissions:
@@ -56,7 +60,7 @@ jobs:
   security-scan:
     name: Security scanning
     runs-on: ubuntu-latest
-    needs: [run-pre-commit-tests]
+    # Run in parallel with pre-commit tests
     permissions:
       contents: read
       security-events: write
@@ -218,7 +222,7 @@ jobs:
 
     name: Deploy test infrastructure (if template.yaml exists)
     runs-on: ubuntu-latest
-    needs: [security-scan]
+    needs: [run-pre-commit-tests, security-scan]
 
     steps:
       - uses: actions/checkout@v4
@@ -321,7 +325,7 @@ jobs:
       contents: read
 
     name: Run pytest CI/CD tests
-    needs: [security-scan, deploy-infrastructure]
+    needs: [run-pre-commit-tests, security-scan, deploy-infrastructure]
     strategy:
       matrix:
         #        python-version: [ "3.10", "3.11" ]
@@ -414,7 +418,7 @@ jobs:
 
     name: Cleanup test infrastructure
     needs: run-tests
-    if: success()
+    if: always()
     runs-on: ubuntu-latest
 
     steps:
