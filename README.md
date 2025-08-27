@@ -16,8 +16,8 @@
 
 ## 📚 Project Resources
 
-| [📖 Current Documentation](https://svange.github.io/tagmania) | [🧪 Test Report](https://svange.github.io/tagmania/test-report.html) |
-|:----------------------------------------------------------------:|:------------------------------------------------------------------------:|
+| [📖 Current Documentation](https://svange.github.io/tagmania) | [🧪 Test Report](https://svange.github.io/tagmania/test-report.html) | [🔒 Security Scan](https://svange.github.io/tagmania/security-reports.html) |
+|:----------------------------------------------------------------:|:------------------------------------------------------------------------:|:------------------------------------------------------------------------------:|
 
 ### Pipeline Artifacts
 
