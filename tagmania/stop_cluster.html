@@ -126,41 +126,47 @@ cluster-stop<span class="w"> </span>--profile<span class="w"> </span>myprofile<s
 </span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a>
 </span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
-</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">tagmania.iac_tools.clusterset</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClusterSet</span>
-</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a>
+</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a>
+</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">tagmania.iac_tools.clusterset</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClusterSet</span>
 </span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a>
-</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point for the cluster stop CLI.</span>
-</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a>
-</span><span id="L-43"><a href="#L-43"><span class="linenos">43</span></a><span class="sd">    Parses command line arguments to identify the cluster name and optional</span>
-</span><span id="L-44"><a href="#L-44"><span class="linenos">44</span></a><span class="sd">    AWS profile, then stops all EC2 instances in the specified cluster.</span>
-</span><span id="L-45"><a href="#L-45"><span class="linenos">45</span></a>
-</span><span id="L-46"><a href="#L-46"><span class="linenos">46</span></a><span class="sd">    Args:</span>
-</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a><span class="sd">        Command line arguments are parsed internally:</span>
-</span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a><span class="sd">        - cluster: Name of the cluster to stop (required)</span>
-</span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a><span class="sd">        - --profile: AWS profile to use (optional)</span>
-</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a>
-</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a><span class="sd">    Raises:</span>
-</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a><span class="sd">        SystemExit: On invalid command line arguments.</span>
-</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a><span class="sd">        AWSError: On AWS API failures during instance stop operations.</span>
-</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="L-55"><a href="#L-55"><span class="linenos">55</span></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;AWS cluster stop tool.&#39;</span><span class="p">,</span>
-</span><span id="L-56"><a href="#L-56"><span class="linenos">56</span></a>                                     <span class="n">epilog</span><span class="o">=</span><span class="s1">&#39;This tool relies on the &quot;Cluster&quot; and &quot;Owner&quot; tags on instances and &#39;</span>
-</span><span id="L-57"><a href="#L-57"><span class="linenos">57</span></a>                                            <span class="s1">&#39;volumes. IAC automation puts this in place.&#39;</span>
-</span><span id="L-58"><a href="#L-58"><span class="linenos">58</span></a>                                            <span class="s1">&#39;Stops the cluster CLUSTER.&#39;</span><span class="p">)</span>
-</span><span id="L-59"><a href="#L-59"><span class="linenos">59</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;cluster&#39;</span><span class="p">,</span>
-</span><span id="L-60"><a href="#L-60"><span class="linenos">60</span></a>                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;the name CLUSTER of the cluster in question. This can be found by looking at any node &#39;</span>
-</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a>                             <span class="s1">&#39;in the AWS console and looking for the &quot;Cluster&quot; tag.&#39;</span><span class="p">)</span>
-</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a>
-</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--profile&#39;</span><span class="p">,</span> <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;the AWS profile to use&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a>
-</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a>    <span class="n">cluster</span> <span class="o">=</span> <span class="n">ClusterSet</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">profile</span><span class="p">)</span>
-</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a>    <span class="n">cluster</span><span class="o">.</span><span class="n">stop_instances</span><span class="p">()</span>
-</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Cluster </span><span class="si">%s</span><span class="s1"> stopped!&#39;</span> <span class="o">%</span> <span class="n">cluster</span><span class="o">.</span><span class="n">cluster_names</span><span class="p">)</span>
-</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>
-</span><span id="L-70"><a href="#L-70"><span class="linenos">70</span></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-</span><span id="L-71"><a href="#L-71"><span class="linenos">71</span></a>    <span class="n">main</span><span class="p">()</span>
+</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a>
+</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point for the cluster stop CLI.</span>
+</span><span id="L-43"><a href="#L-43"><span class="linenos">43</span></a>
+</span><span id="L-44"><a href="#L-44"><span class="linenos">44</span></a><span class="sd">    Parses command line arguments to identify the cluster name and optional</span>
+</span><span id="L-45"><a href="#L-45"><span class="linenos">45</span></a><span class="sd">    AWS profile, then stops all EC2 instances in the specified cluster.</span>
+</span><span id="L-46"><a href="#L-46"><span class="linenos">46</span></a>
+</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a><span class="sd">    Args:</span>
+</span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a><span class="sd">        Command line arguments are parsed internally:</span>
+</span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a><span class="sd">        - cluster: Name of the cluster to stop (required)</span>
+</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a><span class="sd">        - --profile: AWS profile to use (optional)</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a>
+</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a><span class="sd">    Raises:</span>
+</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a><span class="sd">        SystemExit: On invalid command line arguments.</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a><span class="sd">        AWSError: On AWS API failures during instance stop operations.</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos">55</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-56"><a href="#L-56"><span class="linenos">56</span></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+</span><span id="L-57"><a href="#L-57"><span class="linenos">57</span></a>        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;AWS cluster stop tool.&quot;</span><span class="p">,</span>
+</span><span id="L-58"><a href="#L-58"><span class="linenos">58</span></a>        <span class="n">epilog</span><span class="o">=</span><span class="s1">&#39;This tool relies on the &quot;Cluster&quot; and &quot;Owner&quot; tags on instances and &#39;</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos">59</span></a>        <span class="s2">&quot;volumes. IAC automation puts this in place.&quot;</span>
+</span><span id="L-60"><a href="#L-60"><span class="linenos">60</span></a>        <span class="s2">&quot;Stops the cluster CLUSTER.&quot;</span><span class="p">,</span>
+</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a>    <span class="p">)</span>
+</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a>        <span class="s2">&quot;cluster&quot;</span><span class="p">,</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;the name CLUSTER of the cluster in question. This can be found by looking at any node &quot;</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a>        <span class="s1">&#39;in the AWS console and looking for the &quot;Cluster&quot; tag.&#39;</span><span class="p">,</span>
+</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a>    <span class="p">)</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a>
+</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--profile&quot;</span><span class="p">,</span> <span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;the AWS profile to use&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</span><span id="L-70"><a href="#L-70"><span class="linenos">70</span></a>
+</span><span id="L-71"><a href="#L-71"><span class="linenos">71</span></a>    <span class="n">cluster</span> <span class="o">=</span> <span class="n">ClusterSet</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">profile</span><span class="p">)</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos">72</span></a>    <span class="n">cluster</span><span class="o">.</span><span class="n">stop_instances</span><span class="p">()</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos">73</span></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cluster </span><span class="si">{</span><span class="n">cluster</span><span class="o">.</span><span class="n">cluster_names</span><span class="si">}</span><span class="s2"> stopped!&quot;</span><span class="p">)</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos">74</span></a>
+</span><span id="L-75"><a href="#L-75"><span class="linenos">75</span></a>
+</span><span id="L-76"><a href="#L-76"><span class="linenos">76</span></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos">77</span></a>    <span class="n">main</span><span class="p">()</span>
 </span></pre></div>
 
 
@@ -176,35 +182,39 @@ cluster-stop<span class="w"> </span>--profile<span class="w"> </span>myprofile<s
 
     </div>
     <a class="headerlink" href="#main"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="main-41"><a href="#main-41"><span class="linenos">41</span></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-</span><span id="main-42"><a href="#main-42"><span class="linenos">42</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point for the cluster stop CLI.</span>
-</span><span id="main-43"><a href="#main-43"><span class="linenos">43</span></a>
-</span><span id="main-44"><a href="#main-44"><span class="linenos">44</span></a><span class="sd">    Parses command line arguments to identify the cluster name and optional</span>
-</span><span id="main-45"><a href="#main-45"><span class="linenos">45</span></a><span class="sd">    AWS profile, then stops all EC2 instances in the specified cluster.</span>
-</span><span id="main-46"><a href="#main-46"><span class="linenos">46</span></a>
-</span><span id="main-47"><a href="#main-47"><span class="linenos">47</span></a><span class="sd">    Args:</span>
-</span><span id="main-48"><a href="#main-48"><span class="linenos">48</span></a><span class="sd">        Command line arguments are parsed internally:</span>
-</span><span id="main-49"><a href="#main-49"><span class="linenos">49</span></a><span class="sd">        - cluster: Name of the cluster to stop (required)</span>
-</span><span id="main-50"><a href="#main-50"><span class="linenos">50</span></a><span class="sd">        - --profile: AWS profile to use (optional)</span>
-</span><span id="main-51"><a href="#main-51"><span class="linenos">51</span></a>
-</span><span id="main-52"><a href="#main-52"><span class="linenos">52</span></a><span class="sd">    Raises:</span>
-</span><span id="main-53"><a href="#main-53"><span class="linenos">53</span></a><span class="sd">        SystemExit: On invalid command line arguments.</span>
-</span><span id="main-54"><a href="#main-54"><span class="linenos">54</span></a><span class="sd">        AWSError: On AWS API failures during instance stop operations.</span>
-</span><span id="main-55"><a href="#main-55"><span class="linenos">55</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="main-56"><a href="#main-56"><span class="linenos">56</span></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;AWS cluster stop tool.&#39;</span><span class="p">,</span>
-</span><span id="main-57"><a href="#main-57"><span class="linenos">57</span></a>                                     <span class="n">epilog</span><span class="o">=</span><span class="s1">&#39;This tool relies on the &quot;Cluster&quot; and &quot;Owner&quot; tags on instances and &#39;</span>
-</span><span id="main-58"><a href="#main-58"><span class="linenos">58</span></a>                                            <span class="s1">&#39;volumes. IAC automation puts this in place.&#39;</span>
-</span><span id="main-59"><a href="#main-59"><span class="linenos">59</span></a>                                            <span class="s1">&#39;Stops the cluster CLUSTER.&#39;</span><span class="p">)</span>
-</span><span id="main-60"><a href="#main-60"><span class="linenos">60</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;cluster&#39;</span><span class="p">,</span>
-</span><span id="main-61"><a href="#main-61"><span class="linenos">61</span></a>                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;the name CLUSTER of the cluster in question. This can be found by looking at any node &#39;</span>
-</span><span id="main-62"><a href="#main-62"><span class="linenos">62</span></a>                             <span class="s1">&#39;in the AWS console and looking for the &quot;Cluster&quot; tag.&#39;</span><span class="p">)</span>
-</span><span id="main-63"><a href="#main-63"><span class="linenos">63</span></a>
-</span><span id="main-64"><a href="#main-64"><span class="linenos">64</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--profile&#39;</span><span class="p">,</span> <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;the AWS profile to use&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-</span><span id="main-65"><a href="#main-65"><span class="linenos">65</span></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-</span><span id="main-66"><a href="#main-66"><span class="linenos">66</span></a>
-</span><span id="main-67"><a href="#main-67"><span class="linenos">67</span></a>    <span class="n">cluster</span> <span class="o">=</span> <span class="n">ClusterSet</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">profile</span><span class="p">)</span>
-</span><span id="main-68"><a href="#main-68"><span class="linenos">68</span></a>    <span class="n">cluster</span><span class="o">.</span><span class="n">stop_instances</span><span class="p">()</span>
-</span><span id="main-69"><a href="#main-69"><span class="linenos">69</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Cluster </span><span class="si">%s</span><span class="s1"> stopped!&#39;</span> <span class="o">%</span> <span class="n">cluster</span><span class="o">.</span><span class="n">cluster_names</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="main-42"><a href="#main-42"><span class="linenos">42</span></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+</span><span id="main-43"><a href="#main-43"><span class="linenos">43</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point for the cluster stop CLI.</span>
+</span><span id="main-44"><a href="#main-44"><span class="linenos">44</span></a>
+</span><span id="main-45"><a href="#main-45"><span class="linenos">45</span></a><span class="sd">    Parses command line arguments to identify the cluster name and optional</span>
+</span><span id="main-46"><a href="#main-46"><span class="linenos">46</span></a><span class="sd">    AWS profile, then stops all EC2 instances in the specified cluster.</span>
+</span><span id="main-47"><a href="#main-47"><span class="linenos">47</span></a>
+</span><span id="main-48"><a href="#main-48"><span class="linenos">48</span></a><span class="sd">    Args:</span>
+</span><span id="main-49"><a href="#main-49"><span class="linenos">49</span></a><span class="sd">        Command line arguments are parsed internally:</span>
+</span><span id="main-50"><a href="#main-50"><span class="linenos">50</span></a><span class="sd">        - cluster: Name of the cluster to stop (required)</span>
+</span><span id="main-51"><a href="#main-51"><span class="linenos">51</span></a><span class="sd">        - --profile: AWS profile to use (optional)</span>
+</span><span id="main-52"><a href="#main-52"><span class="linenos">52</span></a>
+</span><span id="main-53"><a href="#main-53"><span class="linenos">53</span></a><span class="sd">    Raises:</span>
+</span><span id="main-54"><a href="#main-54"><span class="linenos">54</span></a><span class="sd">        SystemExit: On invalid command line arguments.</span>
+</span><span id="main-55"><a href="#main-55"><span class="linenos">55</span></a><span class="sd">        AWSError: On AWS API failures during instance stop operations.</span>
+</span><span id="main-56"><a href="#main-56"><span class="linenos">56</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="main-57"><a href="#main-57"><span class="linenos">57</span></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+</span><span id="main-58"><a href="#main-58"><span class="linenos">58</span></a>        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;AWS cluster stop tool.&quot;</span><span class="p">,</span>
+</span><span id="main-59"><a href="#main-59"><span class="linenos">59</span></a>        <span class="n">epilog</span><span class="o">=</span><span class="s1">&#39;This tool relies on the &quot;Cluster&quot; and &quot;Owner&quot; tags on instances and &#39;</span>
+</span><span id="main-60"><a href="#main-60"><span class="linenos">60</span></a>        <span class="s2">&quot;volumes. IAC automation puts this in place.&quot;</span>
+</span><span id="main-61"><a href="#main-61"><span class="linenos">61</span></a>        <span class="s2">&quot;Stops the cluster CLUSTER.&quot;</span><span class="p">,</span>
+</span><span id="main-62"><a href="#main-62"><span class="linenos">62</span></a>    <span class="p">)</span>
+</span><span id="main-63"><a href="#main-63"><span class="linenos">63</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="main-64"><a href="#main-64"><span class="linenos">64</span></a>        <span class="s2">&quot;cluster&quot;</span><span class="p">,</span>
+</span><span id="main-65"><a href="#main-65"><span class="linenos">65</span></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;the name CLUSTER of the cluster in question. This can be found by looking at any node &quot;</span>
+</span><span id="main-66"><a href="#main-66"><span class="linenos">66</span></a>        <span class="s1">&#39;in the AWS console and looking for the &quot;Cluster&quot; tag.&#39;</span><span class="p">,</span>
+</span><span id="main-67"><a href="#main-67"><span class="linenos">67</span></a>    <span class="p">)</span>
+</span><span id="main-68"><a href="#main-68"><span class="linenos">68</span></a>
+</span><span id="main-69"><a href="#main-69"><span class="linenos">69</span></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--profile&quot;</span><span class="p">,</span> <span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;the AWS profile to use&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="main-70"><a href="#main-70"><span class="linenos">70</span></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</span><span id="main-71"><a href="#main-71"><span class="linenos">71</span></a>
+</span><span id="main-72"><a href="#main-72"><span class="linenos">72</span></a>    <span class="n">cluster</span> <span class="o">=</span> <span class="n">ClusterSet</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">cluster</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">profile</span><span class="p">)</span>
+</span><span id="main-73"><a href="#main-73"><span class="linenos">73</span></a>    <span class="n">cluster</span><span class="o">.</span><span class="n">stop_instances</span><span class="p">()</span>
+</span><span id="main-74"><a href="#main-74"><span class="linenos">74</span></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cluster </span><span class="si">{</span><span class="n">cluster</span><span class="o">.</span><span class="n">cluster_names</span><span class="si">}</span><span class="s2"> stopped!&quot;</span><span class="p">)</span>
 </span></pre></div>
 
 
