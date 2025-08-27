@@ -21,9 +21,10 @@ Example:
     ```
 """
 
-from functools import lru_cache
-import boto3
 import os
+from functools import lru_cache
+
+import boto3
 
 
 @lru_cache  # cache the client the first time we ask for it

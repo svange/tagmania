@@ -50,6 +50,7 @@ class FilterSet:
         instances = ec2.instances.filter(Filters=filters.to_list())
         ```
     """
+
     def __init__(self, filters=None):
         """Initialize FilterSet with optional existing filters.
 
@@ -57,7 +58,7 @@ class FilterSet:
             filters: List of filter dictionaries in AWS format (optional).
                     If None, creates empty filter set.
         """
-        if filters == None:
+        if filters is None:
             self._filters = []
         else:
             self._filters = filters
@@ -77,7 +78,7 @@ class FilterSet:
         """
         if isinstance(values, str):
             values = [values]
-        f = {'Name': name, 'Values': values}
+        f = {"Name": name, "Values": values}
         self._filters.append(f)
 
     def get(self, name):
@@ -97,8 +98,8 @@ class FilterSet:
             ```
         """
         for f in self._filters:
-            if f['Name'] == name:
-                return f['Values']
+            if f["Name"] == name:
+                return f["Values"]
         return None
 
     def to_list(self):

@@ -14,7 +14,7 @@ repos:
       - id: check-useless-excludes
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       - id: check-vcs-permalinks
       - id: end-of-file-fixer
@@ -30,8 +30,22 @@ repos:
         args: [ '--unsafe' ] # for mkdocs.yml
       - id: detect-private-key
 
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort (python)
+        args: ["--profile", "black", "--line-length", "88"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format
+
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v3.9.1 # automatically updated by Commitizen
+    rev: v3.31.0
     hooks:
       - id: commitizen
 

@@ -634,6 +634,12 @@ jobs:
           name: test-html
           path: docs
 
+      - name: Download security scan results artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: security-scan-results
+          path: docs
+
       - name: Deploy docs to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
