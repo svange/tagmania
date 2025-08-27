@@ -16,7 +16,7 @@ are modified.
 """
 
 from .clusterset import ClusterSet
-from .tagset import TagSet
 from .filterset import FilterSet
+from .tagset import TagSet
 
-__all__ = ["ClusterSet", "TagSet", "FilterSet"]
+__all__ = ["ClusterSet", "FilterSet", "TagSet"]

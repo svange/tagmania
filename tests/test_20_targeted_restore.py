@@ -1,5 +1,5 @@
 import pytest
-import re
+
 from tagmania.iac_tools.clusterset import ClusterSet
 
 
@@ -14,12 +14,12 @@ class TestTargetedRestore:
     @pytest.fixture
     def cluster1(self):
         """ClusterSet for test1 cluster (1 instance)"""
-        return ClusterSet('test1')
+        return ClusterSet("test1")
 
     @pytest.fixture
     def cluster2(self):
         """ClusterSet for test2 cluster (2 instances)"""
-        return ClusterSet('test2')
+        return ClusterSet("test2")
 
     def test_filter_instances_by_name_regex_single_match(self, cluster2):
         """Test filtering instances with regex that matches single instance"""
@@ -33,10 +33,12 @@ class TestTargetedRestore:
         # Verify the matched instance has correct name
         instance_name = None
         for tag in filtered[0].tags:
-            if tag['Key'] == 'Name':
-                instance_name = tag['Value']
+            if tag["Key"] == "Name":
+                instance_name = tag["Value"]
                 break
-        assert instance_name == 'test2-api-01', f"Expected test2-api-01, got {instance_name}"
+        assert (
+            instance_name == "test2-api-01"
+        ), f"Expected test2-api-01, got {instance_name}"
 
     def test_filter_instances_by_name_regex_multiple_match(self, cluster2):
         """Test filtering instances with regex that matches multiple instances"""
@@ -81,10 +83,12 @@ class TestTargetedRestore:
         # Verify the stopped instance is the API instance
         stopped_name = None
         for tag in stopped_instances[0].tags:
-            if tag['Key'] == 'Name':
-                stopped_name = tag['Value']
+            if tag["Key"] == "Name":
+                stopped_name = tag["Value"]
                 break
-        assert stopped_name == 'test2-api-01', f"Expected api instance stopped, got {stopped_name}"
+        assert (
+            stopped_name == "test2-api-01"
+        ), f"Expected api instance stopped, got {stopped_name}"
 
     @pytest.mark.slow
     def test_start_instances_targeted_single(self, cluster2):
@@ -106,10 +110,12 @@ class TestTargetedRestore:
         # Verify the running instance is the DB instance
         running_name = None
         for tag in running_instances[0].tags:
-            if tag['Key'] == 'Name':
-                running_name = tag['Value']
+            if tag["Key"] == "Name":
+                running_name = tag["Value"]
                 break
-        assert running_name == 'test2-db-01', f"Expected db instance running, got {running_name}"
+        assert (
+            running_name == "test2-db-01"
+        ), f"Expected db instance running, got {running_name}"
 
     @pytest.mark.slow
     def test_cross_cluster_isolation(self, cluster1, cluster2):
@@ -148,7 +154,7 @@ class TestTargetedRestore:
 
         # Create a backup first
         cluster2.stop_instances()
-        cluster2.create_snapshots('test-targeted')
+        cluster2.create_snapshots("test-targeted")
 
         # Now test targeted restore for just the API instance
         try:
@@ -160,15 +166,15 @@ class TestTargetedRestore:
             cluster2.delete_volumes_targeted(".*-api-.*")
 
             # Restore volumes for API instance only
-            cluster2.create_volumes_targeted('test-targeted', ".*-api-.*")
-            cluster2.attach_volumes_targeted('test-targeted', ".*-api-.*")
+            cluster2.create_volumes_targeted("test-targeted", ".*-api-.*")
+            cluster2.attach_volumes_targeted("test-targeted", ".*-api-.*")
 
             # Don't start instances - just verify the targeted operations completed
             # This saves significant time waiting for instance start
 
             # If we got here without exceptions, the targeted restore workflow worked
             # Let's just verify we have some restored volumes with the correct label
-            restored_volumes = cluster2.get_restored_volumes('test-targeted')
+            restored_volumes = cluster2.get_restored_volumes("test-targeted")
             assert len(restored_volumes) > 0, "Should have some restored volumes"
 
             # Verify the volumes have the correct label
@@ -176,7 +182,7 @@ class TestTargetedRestore:
             for volume in restored_volumes:
                 if volume.tags:
                     for tag in volume.tags:
-                        if tag['Key'] == 'Label' and tag['Value'] == 'test-targeted':
+                        if tag["Key"] == "Label" and tag["Value"] == "test-targeted":
                             labeled_volumes.append(volume)
                             break
 
@@ -184,7 +190,7 @@ class TestTargetedRestore:
 
         finally:
             # Cleanup: delete test snapshots
-            cluster2.delete_snapshots('test-targeted')
+            cluster2.delete_snapshots("test-targeted")
 
     def test_targeted_restore_invalid_regex(self, cluster2):
         """Test that invalid regex in targeted operations raises appropriate errors"""
@@ -192,10 +198,10 @@ class TestTargetedRestore:
             cluster2.stop_instances_targeted("[invalid")
 
         with pytest.raises(ValueError, match="Invalid regex pattern"):
-            cluster2.create_volumes_targeted('test', "[invalid")
+            cluster2.create_volumes_targeted("test", "[invalid")
 
         with pytest.raises(ValueError, match="Invalid regex pattern"):
-            cluster2.attach_volumes_targeted('test', "[invalid")
+            cluster2.attach_volumes_targeted("test", "[invalid")
 
     def test_cleanup_after_tests(self, cluster1, cluster2):
         """Cleanup test resources"""
@@ -205,11 +211,11 @@ class TestTargetedRestore:
 
         # Delete any test snapshots that might remain
         try:
-            cluster1.delete_snapshots('test-targeted')
-        except:
+            cluster1.delete_snapshots("test-targeted")
+        except Exception:
             pass  # Ignore if snapshots don't exist
 
         try:
-            cluster2.delete_snapshots('test-targeted')
-        except:
+            cluster2.delete_snapshots("test-targeted")
+        except Exception:
             pass  # Ignore if snapshots don't exist

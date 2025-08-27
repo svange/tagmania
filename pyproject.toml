@@ -180,6 +180,10 @@ select = [
 ignore = [
     "E501",  # line too long (handled by formatter)
     "PLR0913", # too many arguments
+    "PLR0912", # too many branches
+    "PLR0915", # too many statements
+    "SIM105", # Use contextlib.suppress
+    "ISC001", # Conflicts with formatter
 ]
 
 [tool.ruff.lint.per-file-ignores]

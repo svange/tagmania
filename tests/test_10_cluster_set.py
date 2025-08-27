@@ -1,5 +1,7 @@
 import pytest
+
 from tagmania.iac_tools.clusterset import ClusterSet
+
 
 class TestBasicClusterOperations:
     """
@@ -10,7 +12,7 @@ class TestBasicClusterOperations:
     @pytest.fixture
     def cluster(self):
         """ClusterSet for test1 cluster (1 instance)"""
-        return ClusterSet('test1')
+        return ClusterSet("test1")
 
     def test_clusterset_stop(self, cluster):
         """
@@ -31,7 +33,7 @@ class TestBasicClusterOperations:
         """
 
         cluster.stop_instances()
-        cluster.create_snapshots('test-basic')
+        cluster.create_snapshots("test-basic")
 
     @pytest.mark.slow
     def test_snapshot_restore(self, cluster):
@@ -43,14 +45,14 @@ class TestBasicClusterOperations:
         cluster.detach_volumes()
         cluster.delete_volumes()
         # Create new volumes from snapshots and attach them
-        cluster.create_volumes('test-basic')
-        cluster.attach_volumes('test-basic')
+        cluster.create_volumes("test-basic")
+        cluster.attach_volumes("test-basic")
 
     def test_snapshot_delete(self, cluster):
         """
         Test the snapshot delete script.
         """
-        cluster.delete_snapshots('test-basic')
+        cluster.delete_snapshots("test-basic")
 
     def test_cleanup_after_tests(self, cluster):
         """Cleanup test resources"""
@@ -59,6 +61,6 @@ class TestBasicClusterOperations:
 
         # Delete any test snapshots that might remain
         try:
-            cluster.delete_snapshots('test-basic')
-        except:
+            cluster.delete_snapshots("test-basic")
+        except Exception:
             pass  # Ignore if snapshots don't exist

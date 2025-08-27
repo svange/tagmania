@@ -53,6 +53,7 @@ class TagSet:
         name = tags.get('Name')
         ```
     """
+
     def __init__(self, tags=None):
         """Initialize TagSet with optional existing tags.
 
@@ -60,7 +61,7 @@ class TagSet:
             tags: List of tag dictionaries in AWS format (optional).
                  If None, creates empty tag set.
         """
-        if tags == None:
+        if tags is None:
             self._tags = []
         else:
             self._tags = tags
@@ -78,7 +79,7 @@ class TagSet:
             tags.add('Owner', 'team-backend')
             ```
         """
-        tag = {'Key': key, 'Value': value}
+        tag = {"Key": key, "Value": value}
         self._tags.append(tag)
 
     def get(self, key):
@@ -98,8 +99,8 @@ class TagSet:
             ```
         """
         for tag in self._tags:
-            if tag['Key'] == key:
-                return tag['Value']
+            if tag["Key"] == key:
+                return tag["Value"]
         return None
 
     def to_list(self):
