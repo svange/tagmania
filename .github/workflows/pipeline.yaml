@@ -28,7 +28,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   pre-commit:
@@ -248,7 +248,7 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run type checking
-        run: uv run mypy src/ || true
+        run: uv run mypy src/
 
       - name: Run unit tests
         run: |

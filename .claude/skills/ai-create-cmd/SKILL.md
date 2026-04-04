@@ -1,6 +1,6 @@
 ---
 name: ai-create-cmd
-description: Create a new Claude skill for trinity repositories. Use when building new automation commands or skills.
+description: Create a new Claude skill for augint-shell repositories. Use when building new automation commands or skills.
 argument-hint: "[skill-name and description]"
 ---
 

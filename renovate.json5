@@ -113,14 +113,23 @@
     },
 
     // ---------------------------------------------------------------
-    // GitHub Actions (grouped, automerge)
+    // GitHub Actions: minor/patch grouped + automerge
     // ---------------------------------------------------------------
     {
       "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
       "commitMessagePrefix": "ci(deps):",
       "automerge": true,
       "groupName": "GitHub Actions",
       "groupSlug": "gh-actions"
+    },
+
+    // GitHub Actions: major requires manual review
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["major"],
+      "commitMessagePrefix": "ci(deps):",
+      "automerge": false
     },
 
     // ---------------------------------------------------------------
@@ -128,7 +137,7 @@
     // ---------------------------------------------------------------
     {
       "matchManagers": ["pre-commit"],
-      "commitMessagePrefix": "chore(deps):",
+      "commitMessagePrefix": "ci(deps):",
       "automerge": true
     }
   ]

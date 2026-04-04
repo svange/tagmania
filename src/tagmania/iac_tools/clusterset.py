@@ -590,7 +590,7 @@ class ClusterSet:
             volume = self._ec2.create_volume(
                 SnapshotId=snapshot.id,
                 AvailabilityZone=avail_zone,
-                TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],  # type: ignore[arg-type]
+                TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],
             )
             volume_ids.append(volume.id)
         # Wait for the volumes to be created
@@ -793,7 +793,7 @@ class ClusterSet:
                 print(f"Creating snapshot of {device} ({volume.id}) on {shortname} ({i.id})")
                 snapshot = volume.create_snapshot(
                     Description=description,
-                    TagSpecifications=[{"ResourceType": "snapshot", "Tags": tags}],  # type: ignore[arg-type]
+                    TagSpecifications=[{"ResourceType": "snapshot", "Tags": tags}],
                 )
                 snapshot_ids.append(snapshot.id)
         # Wait for snapshots to complete
@@ -1101,7 +1101,7 @@ class ClusterSet:
             volume = self._ec2.create_volume(
                 SnapshotId=snapshot.id,
                 AvailabilityZone=avail_zone,
-                TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],  # type: ignore[arg-type]
+                TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],
             )
             volume_ids.append(volume.id)
 

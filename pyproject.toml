@@ -53,34 +53,38 @@ ignore = ["E501"]
 known-first-party = ["tagmania"]
 
 [tool.mypy]
+strict = true
 python_version = "3.12"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = "tagmania.start_cluster"
 disallow_untyped_defs = false
+disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
 module = "tagmania.stop_cluster"
 disallow_untyped_defs = false
+disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
 module = "tagmania.snapshot_manager"
 disallow_untyped_defs = false
+disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
 module = "tagmania.delete_volumes"
 disallow_untyped_defs = false
+disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
 module = "tagmania.delete_snapshots"
 disallow_untyped_defs = false
+disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
 module = "tagmania.tag_manager"
 disallow_untyped_defs = false
+disallow_untyped_calls = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -113,10 +117,6 @@ build_command = "uv lock && uv build"
 match = "main"
 prerelease = false
 prerelease_token = "rc"
-
-[tool.semantic_release.branches.dev]
-match = "dev"
-prerelease = false
 
 [tool.semantic_release.changelog]
 mode = "update"

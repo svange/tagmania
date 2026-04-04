@@ -8,6 +8,8 @@
   },
   "permissions": {
     "allow": [
+      "Bash(npm ci:*)",
+      "Bash(npm install:*)",
       "Bash(npm run:*)",
       "Bash(npm test:*)",
       "Bash(pytest:*)",

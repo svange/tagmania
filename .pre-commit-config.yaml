@@ -19,21 +19,21 @@ repos:
 
       - id: ruff-format
         name: Ruff format
-        entry: uv run ruff format src/ tests/
+        entry: uv run --no-sync ruff format src/ tests/
         language: system
         files: '\.py$'
         pass_filenames: false
 
       - id: ruff-check
         name: Ruff check
-        entry: uv run ruff check --fix src/ tests/
+        entry: uv run --no-sync ruff check --fix src/ tests/
         language: system
         files: '\.py$'
         pass_filenames: false
 
       - id: mypy
         name: MyPy type checking
-        entry: uv run mypy src/
+        entry: uv run --no-sync mypy src/
         language: system
         files: '\.py$'
         pass_filenames: false

@@ -243,7 +243,7 @@ def main():
 
             # Getting a dictionary of all snapshots associated with the cluster provided grouped by label
             label_list = []
-            snapshot_dict = {}
+            snapshot_dict: dict[str, list[str]] = {}
             for snapshot in snapshots:
                 for tag in snapshot.tags:
                     if "Label" in tag["Key"] and tag["Value"] not in label_list:
