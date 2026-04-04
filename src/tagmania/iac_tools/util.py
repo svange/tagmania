@@ -23,12 +23,13 @@ Example:
 
 import os
 from functools import lru_cache
+from typing import Any
 
 import boto3
 
 
 @lru_cache  # cache the client the first time we ask for it
-def _lambda_client():
+def _lambda_client() -> Any:
     """Get cached AWS Lambda client with fallback region handling.
 
     Returns:
@@ -61,10 +62,10 @@ def get_lambda_arn(function_name: str) -> str:
         ```
     """
     response = _lambda_client().get_function(FunctionName=function_name)
-    return response["Configuration"]["FunctionArn"]
+    return str(response["Configuration"]["FunctionArn"])
 
 
-def tag_lambda_functions(function_arns, tags):
+def tag_lambda_functions(function_arns: list[str], tags: dict[str, str]) -> None:
     """Apply tags to multiple Lambda functions.
 
     Args:
@@ -83,7 +84,7 @@ def tag_lambda_functions(function_arns, tags):
         client.tag_resource(Resource=arn, Tags=tags)
 
 
-def untag_lambda_functions(function_arns, keys):
+def untag_lambda_functions(function_arns: list[str], keys: list[str]) -> None:
     """Remove tags from multiple Lambda functions.
 
     Args:

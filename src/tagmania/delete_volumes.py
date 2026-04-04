@@ -51,9 +51,7 @@ def main():
             print(volume.id)
 
         if len(kubernetes_volumes) != 0:
-            print(
-                f"\nKubernetes dynamically created volumes for cluster {args.cluster}:"
-            )
+            print(f"\nKubernetes dynamically created volumes for cluster {args.cluster}:")
             for volume in kubernetes_volumes:
                 ts = TagSet(volume.tags)
                 volume_name = ts.get("Name")
@@ -73,9 +71,7 @@ def main():
             print(volume.id + " (" + volume_name + ")")
 
         if len(volumes) != 0 or len(kubernetes_volumes) != 0:
-            confirm = input(
-                'Do you want to delete these volumes? (only "yes" is accepted): '
-            )
+            confirm = input('Do you want to delete these volumes? (only "yes" is accepted): ')
             if confirm != "yes":
                 print("Command Aborted.")
             else:

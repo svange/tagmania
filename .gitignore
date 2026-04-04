@@ -1,26 +1,111 @@
-.chalice/deployments/
-.chalice/venv/
-.venv*/
+# === Environment Variables ===
+.env
+.env.*
+!.env.example
+*.env
+!*.env.example
+
+# === Python ===
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+**/.venv/
+*.egg-info/
+dist/
+build/
+*.egg
 .pytest_cache/
-.env*
-*.log
-sdk
-.idea
-build
-dist
-*.egg-info
-.run/
-/.aws-sam/pipeline/pipelineconfig.toml
-/packaged-testing.yaml
-report.html
-.c9
-test-report.html
+.coverage
+.coverage.*
+coverage.xml
+coverage.json
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# === AWS SAM ===
 .aws-sam/
-docs
+samconfig.toml
+.sam/
+
+# === Testing ===
+.hypothesis/
+test-results/
+test-results.json
+junit.xml
+*.lcov
+test-report.html
 pytest.log
-.claude
-CLAUDE.md
-Dockerfile
-docker-compose.yml
-Makefile
+
+# === IDE ===
+.idea/
+.vscode/
+*.sublime-*
+*.iml
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# === OS Files ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.*.sw?
+
+# === Logs ===
+logs/
+*.log
+
+# === Temporary Files ===
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+.cache/
+tmp/
+temp/
+
+# === Certificates ===
+*.pem
+*.key
+*.crt
+*.cer
+!*.example.pem
+!*.example.key
+
+# === License Reports (generated) ===
+license-report.json
+runtime-requirements.txt
+
+# === Generated Docs ===
+docs/
+
+# === SAM Pipeline ===
+packaged-testing.yaml
+
+# === Claude Code ===
+.claude/settings.local.json
+.claude/plans/
+
+# === Generated Reports ===
+report.html
+
+# === Reference repos ===
+ai-lls-lib/

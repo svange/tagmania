@@ -37,6 +37,6 @@ Note:
     AWS CLI profile configuration is required for authentication.
 """
 
-__version__ = "2.4.0"
+__version__ = "2.5.1"
 __author__ = "Samuel Vange"
 __email__ = "7166607+svange@users.noreply.github.com"

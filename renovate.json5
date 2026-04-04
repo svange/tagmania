@@ -1,0 +1,135 @@
+// Renovate Bot Configuration for tagmania
+// Docs: https://docs.renovatebot.com/configuration-options/
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+
+  // Extend recommended defaults + pin GH Actions to SHA digests
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigestsToSemver"
+  ],
+
+  // Weekly Sunday night, so PRs merge before Monday
+  "schedule": ["before 11:59pm on Sunday"],
+  "timezone": "America/Los_Angeles",
+
+  // Use GitHub's native auto-merge (respects branch protection)
+  "platformAutomerge": true,
+
+  // Let Renovate decide based on range specifiers
+  "rangeStrategy": "auto",
+
+  // Only manage what we want
+  "enabledManagers": [
+    "pep621",
+    "pre-commit",
+    "github-actions"
+  ],
+
+  // Labels for all Renovate PRs
+  "labels": ["dependencies", "renovate"],
+
+  // Lockfile maintenance: monthly uv lock refresh for transitive deps
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 11:59pm on the first day of the month"],
+    "commitMessageAction": "refresh",
+    "automerge": true
+  },
+
+  // Vulnerability alerts bypass schedule -- fix ASAP
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": ["at any time"],
+    "labels": ["dependencies", "security"],
+    "commitMessagePrefix": "fix(deps):",
+    "automerge": true
+  },
+
+  "packageRules": [
+    // ---------------------------------------------------------------
+    // Production dependencies
+    // ---------------------------------------------------------------
+
+    // Prod patches: automerge with chore prefix (no release)
+    {
+      "matchDepTypes": ["dependencies"],
+      "matchManagers": ["pep621"],
+      "matchUpdateTypes": ["patch"],
+      "commitMessagePrefix": "chore(deps):",
+      "automerge": true
+    },
+
+    // Prod minors: manual review, no release
+    {
+      "matchDepTypes": ["dependencies"],
+      "matchManagers": ["pep621"],
+      "matchUpdateTypes": ["minor"],
+      "commitMessagePrefix": "chore(deps):",
+      "automerge": false
+    },
+
+    // Prod majors: require dashboard approval, no release
+    {
+      "matchDepTypes": ["dependencies"],
+      "matchManagers": ["pep621"],
+      "matchUpdateTypes": ["major"],
+      "commitMessagePrefix": "chore(deps):",
+      "automerge": false,
+      "dependencyDashboardApproval": true
+    },
+
+    // ---------------------------------------------------------------
+    // Dev dependencies (grouped)
+    // ---------------------------------------------------------------
+
+    // Dev patches + minors: automerge, grouped
+    {
+      "matchDepTypes": ["devDependencies", "dependency-groups"],
+      "matchManagers": ["pep621"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "commitMessagePrefix": "chore(deps-dev):",
+      "automerge": true,
+      "groupName": "dev dependency updates",
+      "groupSlug": "dev-deps"
+    },
+
+    // Dev majors: manual review
+    {
+      "matchDepTypes": ["devDependencies", "dependency-groups"],
+      "matchManagers": ["pep621"],
+      "matchUpdateTypes": ["major"],
+      "commitMessagePrefix": "chore(deps-dev):",
+      "automerge": false
+    },
+
+    // ---------------------------------------------------------------
+    // python-semantic-release: never automerge
+    // ---------------------------------------------------------------
+    {
+      "matchPackageNames": ["python-semantic-release"],
+      "automerge": false,
+      "commitMessagePrefix": "chore(deps-dev):"
+    },
+
+    // ---------------------------------------------------------------
+    // GitHub Actions (grouped, automerge)
+    // ---------------------------------------------------------------
+    {
+      "matchManagers": ["github-actions"],
+      "commitMessagePrefix": "ci(deps):",
+      "automerge": true,
+      "groupName": "GitHub Actions",
+      "groupSlug": "gh-actions"
+    },
+
+    // ---------------------------------------------------------------
+    // Pre-commit hooks (automerge)
+    // ---------------------------------------------------------------
+    {
+      "matchManagers": ["pre-commit"],
+      "commitMessagePrefix": "chore(deps):",
+      "automerge": true
+    }
+  ]
+}

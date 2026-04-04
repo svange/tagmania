@@ -41,10 +41,13 @@ Example:
     ```
 """
 
+from __future__ import annotations
+
 import datetime
 import logging
 import re
 import time
+from typing import Any
 
 import boto3
 
@@ -71,7 +74,7 @@ class ClusterSet:
         modification of unmanaged resources.
     """
 
-    def __init__(self, cluster_names, profile=None):
+    def __init__(self, cluster_names: str | list[str], profile: str | None = None) -> None:
         """Initialize ClusterSet for managing one or more clusters.
 
         Creates a new ClusterSet instance for managing EC2 instances and related
@@ -113,16 +116,16 @@ class ClusterSet:
         self.AUTOMATION_KEY = "SNAPSHOT_MANAGER"
 
         # cluster_names can be a string 'aws-dev5' or a list ['aws-dev1', 'aws-dev2', etc...]
+        # Normalize to always be a string for single-cluster usage
         self.cluster_names = cluster_names
 
-        if not isinstance(cluster_names, list):
-            cluster_names = [self.cluster_names]
+        cluster_list = cluster_names if isinstance(cluster_names, list) else [cluster_names]
 
         # Use this as a starting point to build filters that only return
         # resources associated with this cluster. Use the 'get_cluster_filter'
         # method to get a copy of it rather than doing direct assignment.
-        self._cluster_filter = [
-            {"Name": "tag:Cluster", "Values": cluster_names},
+        self._cluster_filter: list[dict[str, Any]] = [
+            {"Name": "tag:Cluster", "Values": cluster_list},
         ]
 
         # Set up logging
@@ -141,11 +144,18 @@ class ClusterSet:
         self._ec2 = aws_session.resource("ec2")
         self._ec2_client = aws_session.client("ec2")
 
-    def get_cluster_filter(self):
+    @property
+    def _cluster_name_str(self) -> str:
+        """Get cluster name as a string (uses first name if multiple)."""
+        if isinstance(self.cluster_names, list):
+            return self.cluster_names[0]
+        return self.cluster_names
+
+    def get_cluster_filter(self) -> list[dict[str, Any]]:
         # Return a copy to defend against modifications
         return self._cluster_filter.copy()
 
-    def get_instances(self):
+    def get_instances(self) -> list[Any]:
         """Get all EC2 instances belonging to this cluster set.
 
         Retrieves all EC2 instances that have a "Cluster" tag matching any of the
@@ -179,7 +189,7 @@ class ClusterSet:
         instances = self._ec2.instances.filter(Filters=filters)
         return list(instances.limit(self._MAX_ITEMS))
 
-    def get_deployed_clusters(self):
+    def get_deployed_clusters(self) -> dict[Any, list[Any]]:
         """
         Get a dictionary with all clusters already deployed.
 
@@ -198,15 +208,19 @@ class ClusterSet:
         filters = fs.to_list()
         instances = self._ec2.instances.filter(Filters=filters)
         instance_list = list(instances)
-        cluster_dict = {k: [] for k in self.cluster_names}
+        cluster_names = (
+            self.cluster_names if isinstance(self.cluster_names, list) else [self.cluster_names]
+        )
+        cluster_dict: dict[str, list[Any]] = {k: [] for k in cluster_names}
 
         for i in instance_list:
             cluster_tag = TagSet(i.tags).get("Cluster")
-            cluster_dict[cluster_tag].append(i)
+            if cluster_tag is not None:
+                cluster_dict[cluster_tag].append(i)
 
         return cluster_dict
 
-    def get_deployed_cluster_names(self):
+    def get_deployed_cluster_names(self) -> set[str | None]:
         """
         Get a set of all supported environment cluster names already deployed.
 
@@ -234,7 +248,7 @@ class ClusterSet:
 
         return set(instance_cluster_names)
 
-    def get_running_instances(self):
+    def get_running_instances(self) -> list[Any]:
         """
         Get list of instances that are powered on. This includes instances in
         a pending, running, or stopping state.
@@ -252,7 +266,7 @@ class ClusterSet:
         instances = self._ec2.instances.filter(Filters=filters)
         return list(instances.limit(self._MAX_ITEMS))
 
-    def get_running_clusters(self):
+    def get_running_clusters(self) -> dict[Any, list[Any]]:
         """
         Get a dictionary with all clusters that are powered on. This includes instances in
         a pending, running, or stopping state.
@@ -269,15 +283,19 @@ class ClusterSet:
         filters = fs.to_list()
         instances = self._ec2.instances.filter(Filters=filters)
         instance_list = list(instances)
-        cluster_dict = {k: [] for k in self.cluster_names}
+        cluster_names = (
+            self.cluster_names if isinstance(self.cluster_names, list) else [self.cluster_names]
+        )
+        cluster_dict: dict[str, list[Any]] = {k: [] for k in cluster_names}
 
         for i in instance_list:
             cluster_tag = TagSet(i.tags).get("Cluster")
-            cluster_dict[cluster_tag].append(i)
+            if cluster_tag is not None:
+                cluster_dict[cluster_tag].append(i)
 
         return cluster_dict
 
-    def get_stopped_instances(self):
+    def get_stopped_instances(self) -> list[Any]:
         """
         Get list of instances that are powered off.
 
@@ -294,7 +312,7 @@ class ClusterSet:
         instances = self._ec2.instances.filter(Filters=filters)
         return list(instances.limit(self._MAX_ITEMS))
 
-    def get_stopped_clusters(self):
+    def get_stopped_clusters(self) -> dict[Any, list[Any]]:
         """
         Get a dictionary with all clusters that are powered off.
 
@@ -310,15 +328,19 @@ class ClusterSet:
         filters = fs.to_list()
         instances = self._ec2.instances.filter(Filters=filters)
         instance_list = list(instances)
-        cluster_dict = {k: [] for k in self.cluster_names}
+        cluster_names = (
+            self.cluster_names if isinstance(self.cluster_names, list) else [self.cluster_names]
+        )
+        cluster_dict: dict[str, list[Any]] = {k: [] for k in cluster_names}
 
         for i in instance_list:
             cluster_tag = TagSet(i.tags).get("Cluster")
-            cluster_dict[cluster_tag].append(i)
+            if cluster_tag is not None:
+                cluster_dict[cluster_tag].append(i)
 
         return cluster_dict
 
-    def start_instances(self):
+    def start_instances(self) -> None:
         """Start all stopped EC2 instances in this cluster.
 
         Identifies all instances in the cluster that are currently in 'stopped' state
@@ -353,7 +375,7 @@ class ClusterSet:
             for i in instances:
                 i.wait_until_running()
 
-    def stop_instances(self):
+    def stop_instances(self) -> None:
         """
         Stop instances associated with this cluster.
 
@@ -379,7 +401,7 @@ class ClusterSet:
             for i in instances:
                 i.wait_until_stopped()
 
-    def tag_instances(self, tags):
+    def tag_instances(self, tags: list[dict[str, str]]) -> None:
         # The resource API is somewhat less efficient than the low-level client
         # API because it does one request per tag operation. For reasonably
         # sized collections this should be ok.
@@ -389,7 +411,7 @@ class ClusterSet:
             print(f"Tagging instance {i.id}")
             i.create_tags(Tags=tags)
 
-    def untag_instances(self, tags):
+    def untag_instances(self, tags: list[dict[str, str]]) -> None:
         # Might as well un-tag on one big batch since instance objects don't
         # have direct support for un-tagging.
         instances = self.get_instances()
@@ -397,9 +419,9 @@ class ClusterSet:
         for i in instances:
             print(f"Un-tagging instance {i.id}")
             instance_ids.append(i.id)
-        self._ec2_client.delete_tags(Resources=instance_ids, Tags=tags)
+        self._ec2_client.delete_tags(Resources=instance_ids, Tags=tags)  # type: ignore[arg-type]
 
-    def get_volumes(self):
+    def get_volumes(self) -> list[Any]:
         """
         Get list of volumes associated with this cluster.
 
@@ -422,7 +444,7 @@ class ClusterSet:
         volumes = self._ec2.volumes.filter(Filters=filters)
         return list(volumes.limit(self._MAX_ITEMS))
 
-    def get_kubernetes_volumes(self):
+    def get_kubernetes_volumes(self) -> list[Any]:
         """
         Get list of kubernetes volumes associated with this cluster.
 
@@ -434,7 +456,12 @@ class ClusterSet:
         self._logger.debug("method_call: get_kubernetes_volumes")
         fs = FilterSet(
             [
-                {"Name": "tag:KubernetesCluster", "Values": [self.cluster_names]},
+                {
+                    "Name": "tag:KubernetesCluster",
+                    "Values": self.cluster_names
+                    if isinstance(self.cluster_names, list)
+                    else [self.cluster_names],
+                },
                 {
                     "Name": "tag:kubernetes.io/created-for/pvc/namespace",
                     "Values": ["openshift-logging"],
@@ -445,7 +472,7 @@ class ClusterSet:
         volumes = self._ec2.volumes.filter(Filters=filters)
         return list(volumes)
 
-    def get_restored_volumes(self, label=None):
+    def get_restored_volumes(self, label: str | None = None) -> list[Any]:
         """
         Get list of volumes that were previously created from snapshots.
 
@@ -472,7 +499,7 @@ class ClusterSet:
         volumes = self._ec2.volumes.filter(Filters=filters)
         return list(volumes.limit(self._MAX_ITEMS))
 
-    def attach_volumes(self, label):
+    def attach_volumes(self, label: str) -> None:
         """
         Attach volumes to associated instances.
 
@@ -497,7 +524,7 @@ class ClusterSet:
         # the instance 'Name' tag.
         volume_ids = []
         for i in instances:
-            instance_name = TagSet(i.tags).get("Name")
+            instance_name = TagSet(i.tags).get("Name") or ""
             for volume in volumes:
                 ts = TagSet(volume.tags)
                 instance = ts.get("Instance")
@@ -517,7 +544,7 @@ class ClusterSet:
             print(f"Waiting for {len(volume_ids)} volumes to be attached...")
             self.wait_for_volumes(volume_ids, "volume_in_use")
 
-    def create_volumes(self, label):
+    def create_volumes(self, label: str) -> None:
         """
         Create new volumes from managed snapshots.
 
@@ -551,7 +578,7 @@ class ClusterSet:
             avail_zone = self.get_instances()[0].placement["AvailabilityZone"]
             # Make tags
             ts = TagSet()
-            ts.add("Cluster", self.cluster_names)
+            ts.add("Cluster", self._cluster_name_str)
             ts.add("Device", device)
             ts.add("Instance", instance)
             ts.add("Label", label)
@@ -563,7 +590,7 @@ class ClusterSet:
             volume = self._ec2.create_volume(
                 SnapshotId=snapshot.id,
                 AvailabilityZone=avail_zone,
-                TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],
+                TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],  # type: ignore[arg-type]
             )
             volume_ids.append(volume.id)
         # Wait for the volumes to be created
@@ -576,7 +603,7 @@ class ClusterSet:
             # for the tags to be applied.
             time.sleep(10)
 
-    def delete_volumes(self):
+    def delete_volumes(self) -> None:
         """
         Delete all volumes associated with this cluster.
 
@@ -605,7 +632,7 @@ class ClusterSet:
             print(f"Waiting for {len(volume_ids)} volumes to be deleted...")
             self.wait_for_volumes(volume_ids, "volume_deleted")
 
-    def delete_kubernetes_volumes(self):
+    def delete_kubernetes_volumes(self) -> None:
         """
         Delete all kubernetes volumes associated with this cluster.
 
@@ -634,7 +661,7 @@ class ClusterSet:
             print(f"Waiting for {len(volume_ids)} volumes to be deleted...")
             self.wait_for_volumes(volume_ids, "volume_deleted")
 
-    def detach_volumes(self):
+    def detach_volumes(self) -> None:
         """
         Detach all currently attached volumes.
 
@@ -652,7 +679,7 @@ class ClusterSet:
             volumes = i.volumes.all()
             for volume in volumes:
                 device = volume.attachments[0]["Device"]
-                instance_name = TagSet(i.tags).get("Name")
+                instance_name = TagSet(i.tags).get("Name") or ""
                 shortname = instance_name.split(".")[0]
                 print(f"Detaching {device} ({volume.id}) from {shortname} ({i.id})")
                 volume.detach_from_instance(Device=device, InstanceId=i.id)
@@ -662,13 +689,13 @@ class ClusterSet:
             print(f"Waiting for {len(volume_ids)} volumes to be detached...")
             self.wait_for_volumes(volume_ids, "volume_available")
 
-    def tag_volumes(self, tags):
+    def tag_volumes(self, tags: list[dict[str, str]]) -> None:
         volumes = self.get_volumes()
         for volume in volumes:
             print(f"Tagging volume {volume.id}")
             volume.create_tags(Tags=tags)
 
-    def untag_volumes(self, tags):
+    def untag_volumes(self, tags: list[dict[str, str]]) -> None:
         volumes = self.get_volumes()
         volume_ids = []
         for volume in volumes:
@@ -676,9 +703,9 @@ class ClusterSet:
             volume_ids.append(volume.id)
         # Might as well un-tag on one big batch since volume objects don't
         # have direct support for un-tagging.
-        self._ec2_client.delete_tags(Resources=volume_ids, Tags=tags)
+        self._ec2_client.delete_tags(Resources=volume_ids, Tags=tags)  # type: ignore[arg-type]
 
-    def wait_for_volumes(self, volume_ids, status):
+    def wait_for_volumes(self, volume_ids: list[str], status: str) -> None:
         """
         Wait for an action to complete on volumes.
 
@@ -690,7 +717,7 @@ class ClusterSet:
         """
         # This is a helper method - perhaps it should be static
         self._logger.debug("method_call: wait_for_volumes")
-        waiter = self._ec2_client.get_waiter(status)
+        waiter = self._ec2_client.get_waiter(status)  # type: ignore[call-overload]
         waiter.wait(
             VolumeIds=volume_ids,
             WaiterConfig={
@@ -699,7 +726,7 @@ class ClusterSet:
             },
         )
 
-    def get_snapshots(self, label=None):
+    def get_snapshots(self, label: str | None = None) -> list[Any]:
         """
         Get a list of cluster snapshots.
 
@@ -722,7 +749,7 @@ class ClusterSet:
         snapshots = self._ec2.snapshots.filter(Filters=filters)
         return list(snapshots.limit(self._MAX_ITEMS))
 
-    def create_snapshots(self, label):
+    def create_snapshots(self, label: str) -> None:
         """
         Create snapshots of volumes.
 
@@ -742,19 +769,19 @@ class ClusterSet:
         # Get list of instances that need snapshots taken
         instances = self.get_instances()
         for i in instances:
-            instance_name = TagSet(i.tags).get("Name")
+            instance_name = TagSet(i.tags).get("Name") or ""
             # Get collection of volumes for the current instance
             volumes = i.volumes.all()
             for volume in volumes:
                 device = volume.attachments[0]["Device"]
                 # Make description
-                timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+                timestamp = datetime.datetime.now(tz=datetime.UTC)
                 date = timestamp.strftime("%Y-%m-%d")
                 time = timestamp.strftime("%H:%M:%S")
                 description = f"Managed snapshot taken on {date} at {time}"
                 # Make tags
                 ts = TagSet()
-                ts.add("Cluster", self.cluster_names)
+                ts.add("Cluster", self._cluster_name_str)
                 ts.add("Device", device)
                 ts.add("Instance", instance_name)
                 ts.add("Label", label)
@@ -763,12 +790,10 @@ class ClusterSet:
                 tags = ts.to_list()
                 # Create shapshot
                 shortname = instance_name.split(".")[0]
-                print(
-                    f"Creating snapshot of {device} ({volume.id}) on {shortname} ({i.id})"
-                )
+                print(f"Creating snapshot of {device} ({volume.id}) on {shortname} ({i.id})")
                 snapshot = volume.create_snapshot(
                     Description=description,
-                    TagSpecifications=[{"ResourceType": "snapshot", "Tags": tags}],
+                    TagSpecifications=[{"ResourceType": "snapshot", "Tags": tags}],  # type: ignore[arg-type]
                 )
                 snapshot_ids.append(snapshot.id)
         # Wait for snapshots to complete
@@ -782,7 +807,7 @@ class ClusterSet:
             },
         )
 
-    def delete_snapshots(self, label):
+    def delete_snapshots(self, label: str) -> None:
         """
         Delete cluster snapshots that have the given label.
 
@@ -802,13 +827,13 @@ class ClusterSet:
         # against any possible timing issues.
         time.sleep(2)
 
-    def tag_snapshots(self, tags):
+    def tag_snapshots(self, tags: list[dict[str, str]]) -> None:
         snapshots = self.get_snapshots()
         for snapshot in snapshots:
             print(f"Tagging snapshot {snapshot.id}")
             snapshot.create_tags(Tags=tags)
 
-    def untag_snapshots(self, tags):
+    def untag_snapshots(self, tags: list[dict[str, str]]) -> None:
         snapshots = self.get_snapshots()
         snapshot_ids = []
         for snapshot in snapshots:
@@ -816,9 +841,9 @@ class ClusterSet:
             snapshot_ids.append(snapshot.id)
         # Might as well un-tag on one big batch since snapshot objects don't
         # have direct support for un-tagging.
-        self._ec2_client.delete_tags(Resources=snapshot_ids, Tags=tags)
+        self._ec2_client.delete_tags(Resources=snapshot_ids, Tags=tags)  # type: ignore[arg-type]
 
-    def get_subnet(self):
+    def get_subnet(self) -> Any:
         """
         Get subnet belonging to this cluster.
 
@@ -837,17 +862,17 @@ class ClusterSet:
             raise Exception("Error (get_subnet): more than one subnet returned.")
         return subnet_list[0]
 
-    def tag_subnet(self, tags):
+    def tag_subnet(self, tags: list[dict[str, str]]) -> None:
         subnet = self.get_subnet()
         print(f"Tagging subnet {subnet.id}")
         subnet.create_tags(Tags=tags)
 
-    def untag_subnet(self, tags):
+    def untag_subnet(self, tags: list[dict[str, str]]) -> None:
         subnet = self.get_subnet()
         print(f"Un-tagging subnet {subnet.id}")
-        self._ec2_client.delete_tags(Resources=[subnet.id], Tags=tags)
+        self._ec2_client.delete_tags(Resources=[subnet.id], Tags=tags)  # type: ignore[arg-type]
 
-    def _filter_instances_by_name_regex(self, instances, name_pattern):
+    def _filter_instances_by_name_regex(self, instances: list[Any], name_pattern: str) -> list[Any]:
         """
         Filter instances by matching their Name tag against a regex pattern.
 
@@ -879,7 +904,7 @@ class ClusterSet:
 
         return filtered_instances
 
-    def stop_instances_targeted(self, name_pattern):
+    def stop_instances_targeted(self, name_pattern: str) -> None:
         """
         Stop instances that match the given Name tag regex pattern.
 
@@ -905,7 +930,7 @@ class ClusterSet:
             for i in instances:
                 i.wait_until_stopped()
 
-    def start_instances_targeted(self, name_pattern):
+    def start_instances_targeted(self, name_pattern: str) -> None:
         """
         Start instances that match the given Name tag regex pattern.
 
@@ -931,7 +956,7 @@ class ClusterSet:
             for i in instances:
                 i.wait_until_running()
 
-    def detach_volumes_targeted(self, name_pattern):
+    def detach_volumes_targeted(self, name_pattern: str) -> None:
         """
         Detach volumes from instances that match the given Name tag regex pattern.
 
@@ -955,7 +980,7 @@ class ClusterSet:
             volumes = i.volumes.all()
             for volume in volumes:
                 device = volume.attachments[0]["Device"]
-                instance_name = TagSet(i.tags).get("Name")
+                instance_name = TagSet(i.tags).get("Name") or ""
                 shortname = instance_name.split(".")[0]
                 print(f"Detaching {device} ({volume.id}) from {shortname} ({i.id})")
                 volume.detach_from_instance(Device=device, InstanceId=i.id)
@@ -965,7 +990,7 @@ class ClusterSet:
             print(f"Waiting for {len(volume_ids)} volumes to be detached...")
             self.wait_for_volumes(volume_ids, "volume_available")
 
-    def delete_volumes_targeted(self, name_pattern):
+    def delete_volumes_targeted(self, name_pattern: str) -> None:
         """
         Delete volumes associated with instances that match the given Name tag regex pattern.
 
@@ -993,9 +1018,7 @@ class ClusterSet:
                     if pattern.search(volume_instance_tag):
                         targeted_volumes.append(volume)
                 except re.error as e:
-                    raise ValueError(
-                        f"Invalid regex pattern '{name_pattern}': {e}"
-                    ) from e
+                    raise ValueError(f"Invalid regex pattern '{name_pattern}': {e}") from e
 
         if len(targeted_volumes) == 0:
             print(f"No volumes found for instances matching pattern '{name_pattern}'.")
@@ -1009,7 +1032,7 @@ class ClusterSet:
             print(f"Waiting for {len(volume_ids)} volumes to be deleted...")
             self.wait_for_volumes(volume_ids, "volume_deleted")
 
-    def create_volumes_targeted(self, label, name_pattern):
+    def create_volumes_targeted(self, label: str, name_pattern: str) -> None:
         """
         Create new volumes from snapshots for instances matching the given Name tag regex pattern.
 
@@ -1044,9 +1067,7 @@ class ClusterSet:
                 targeted_snapshots.append(snapshot)
 
         if len(targeted_snapshots) == 0:
-            print(
-                f"No snapshots found for instances matching pattern '{name_pattern}'."
-            )
+            print(f"No snapshots found for instances matching pattern '{name_pattern}'.")
             return
 
         # Create volumes
@@ -1068,7 +1089,7 @@ class ClusterSet:
             avail_zone = self.get_instances()[0].placement["AvailabilityZone"]
             # Make tags
             ts = TagSet()
-            ts.add("Cluster", self.cluster_names)
+            ts.add("Cluster", self._cluster_name_str)
             ts.add("Device", device)
             ts.add("Instance", instance)
             ts.add("Label", label)
@@ -1080,7 +1101,7 @@ class ClusterSet:
             volume = self._ec2.create_volume(
                 SnapshotId=snapshot.id,
                 AvailabilityZone=avail_zone,
-                TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],
+                TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],  # type: ignore[arg-type]
             )
             volume_ids.append(volume.id)
 
@@ -1090,7 +1111,7 @@ class ClusterSet:
             self.wait_for_volumes(volume_ids, "volume_available")
             time.sleep(10)
 
-    def attach_volumes_targeted(self, label, name_pattern):
+    def attach_volumes_targeted(self, label: str, name_pattern: str) -> None:
         """
         Attach volumes to instances that match the given Name tag regex pattern.
 
@@ -1114,7 +1135,7 @@ class ClusterSet:
 
         volume_ids = []
         for i in instances:
-            instance_name = TagSet(i.tags).get("Name")
+            instance_name = TagSet(i.tags).get("Name") or ""
             for volume in volumes:
                 ts = TagSet(volume.tags)
                 volume_instance = ts.get("Instance")
@@ -1127,9 +1148,7 @@ class ClusterSet:
                     volume_ids.append(volume.id)
 
         if len(volume_ids) == 0:
-            print(
-                f"Error: No volumes to attach for instances matching pattern '{name_pattern}'."
-            )
+            print(f"Error: No volumes to attach for instances matching pattern '{name_pattern}'.")
         else:
             # Wait for the volumes to be attached
             print(f"Waiting for {len(volume_ids)} volumes to be attached...")

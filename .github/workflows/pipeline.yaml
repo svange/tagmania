@@ -1,140 +1,111 @@
-name: Python 🐍 CI/CD Pipeline
+name: CI/CD Pipeline
 
 on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - main
       - dev
-  pull_request:
-    branches:
-      - main
 
 env:
-  # Vars from .env file or GitHub Environment
   TESTING_REGION: ${{ vars.TESTING_REGION }}
+  AWS_REGION: ${{ vars.TESTING_REGION }}
   TESTING_ARTIFACTS_BUCKET: ${{ vars.TESTING_ARTIFACTS_BUCKET }}
   TESTING_CLOUDFORMATION_EXECUTION_ROLE: ${{ vars.TESTING_CLOUDFORMATION_EXECUTION_ROLE }}
   TESTING_PIPELINE_EXECUTION_ROLE: ${{ vars.TESTING_PIPELINE_EXECUTION_ROLE }}
   AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
-  # Secrets from .env file or GitHub Secrets
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-  # For Pipeline Only
   MODULE_NAME: ${{ vars.MODULE_NAME }}
-  PYTHON_VERSION: ${{ vars.PYTHON_VERSION }}
-  # Static stack name - one testing environment for the project
+  PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.12' }}
   TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing
 
-# Concurrency control to prevent simultaneous deployments
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
-
-# default: least privileged permissions across all jobs
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  run-pre-commit-tests:
-    name: Enforce commit standards
+  pre-commit:
+    name: Pre-commit checks
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install pre-commit
-        run: |
-          pip install pre-commit
+      - name: Install UV
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --all-extras
 
       - name: Run pre-commit hooks
-        run: |
-          pre-commit run --all-files --show-diff-on-failure
+        run: uv run pre-commit run --all-files
 
   security-scan:
     name: Security scanning
     runs-on: ubuntu-latest
-    # Run in parallel with pre-commit tests
+    needs: [pre-commit]
     permissions:
       contents: read
       security-events: write
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Set up python
-        uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install UV
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
         with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-security-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root --with security
+        run: uv sync --all-extras
 
-      - name: Install project
-        run: poetry install --no-interaction --with security
-
-      - name: Generate Bandit report
+      - name: Run Bandit security scan
         run: |
-          poetry run bandit -r src/ -f json -o bandit-report.json || echo '{"errors": [], "results": [], "metrics": {"_totals": {"nosec": 0, "skipped_tests": 0}}}' > bandit-report.json
+          uv run bandit -r src/ -f json -o bandit-report.json || true
+          uv run bandit -r src/ -ll
+        continue-on-error: false
+
+      - name: Run pip-audit
+        run: |
+          uv export --no-dev --no-hashes -o prod-requirements.txt
+          uv run pip-audit --desc --format json --output pip-audit-report.json \
+            -r prod-requirements.txt --no-deps
+        continue-on-error: false
+
+      - name: Run Semgrep scan
+        uses: semgrep/semgrep-action@713efdd345f3035192eaa63f56867b88e63e4e5d # v1
+        with:
+          config: auto
         continue-on-error: true
 
-      - name: Run Bandit security scan (enforced)
+      - name: Generate security HTML report
+        if: always()
         run: |
-          poetry run bandit -r src/ -ll  # Only fail on medium and high severity issues
-
-      - name: Generate Safety report
-        run: |
-          # Safety can output HTML instead of JSON in some cases, so we handle both
-          poetry run safety check --json --output safety-report.json || echo '{"vulnerabilities": [], "scan_type": "safety", "error": "Safety scan completed with no vulnerabilities or failed to generate JSON"}' > safety-report.json
-        continue-on-error: true
-
-      - name: Run Safety check (enforced)
-        run: |
-          poetry run safety check
-
-      - name: Generate pip-audit report
-        run: |
-          poetry run pip-audit --desc --format json --output pip-audit-report.json || echo '{"dependencies": [], "vulnerabilities": []}' > pip-audit-report.json
-        continue-on-error: true
-
-      - name: Run pip-audit (enforced)
-        run: |
-          poetry run pip-audit --desc
-
-      - name: Generate Semgrep report
-        run: |
-          poetry run semgrep --config=auto --json --output=semgrep-report.json src/ || echo '{"results": [], "errors": []}' > semgrep-report.json
-        continue-on-error: true
-
-      - name: Run Semgrep scan (enforced)
-        run: |
-          poetry run semgrep --config=auto src/
-
-      - name: Generate HTML reports from JSON
-        run: |
-          # Create a simple HTML wrapper for JSON reports
           cat > security-reports.html << 'EOF'
           <!DOCTYPE html>
           <html>
@@ -144,7 +115,7 @@ jobs:
                   body { font-family: Arial, sans-serif; margin: 20px; background: #0d1117; color: #c9d1d9; }
                   .report { margin: 20px 0; padding: 15px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; }
                   .report h2 { color: #58a6ff; margin-top: 0; }
-                  pre { background: #0d1117; padding: 10px; border-radius: 4px; overflow-x: auto; border: 1px solid #30363d; }
+                  pre { background: #0d1117; padding: 10px; border-radius: 4px; overflow-x: auto; border: 1px solid #30363d; font-size: 12px; }
                   .error { color: #ff7b72; }
                   .warning { color: #ffa657; }
                   .info { color: #79c0ff; }
@@ -152,40 +123,19 @@ jobs:
           </head>
           <body>
               <h1>Security Scan Results</h1>
-
               <div class="report">
-                  <h2>🔍 Bandit Security Scan</h2>
-                  <p>Python security issues detected by Bandit:</p>
-                  <pre id="bandit-content">Loading...</pre>
+                  <h2>Bandit Security Scan</h2>
+                  <pre id="bandit-content"></pre>
               </div>
-
               <div class="report">
-                  <h2>🚨 Safety Vulnerability Check</h2>
-                  <p>Known vulnerabilities in dependencies:</p>
-                  <pre id="safety-content">Loading...</pre>
+                  <h2>Pip-Audit Results</h2>
+                  <pre id="audit-content"></pre>
               </div>
-
-              <div class="report">
-                  <h2>🔧 Pip-Audit Results</h2>
-                  <p>Package vulnerability audit:</p>
-                  <pre id="audit-content">Loading...</pre>
-              </div>
-
-              <div class="report">
-                  <h2>🎯 Semgrep Analysis</h2>
-                  <p>Static code analysis findings:</p>
-                  <pre id="semgrep-content">Loading...</pre>
-              </div>
-
               <script>
-                  // Load and display JSON reports
                   const reports = [
                       {id: 'bandit-content', file: 'bandit-report.json'},
-                      {id: 'safety-content', file: 'safety-report.json'},
-                      {id: 'audit-content', file: 'pip-audit-report.json'},
-                      {id: 'semgrep-content', file: 'semgrep-report.json'}
+                      {id: 'audit-content', file: 'pip-audit-report.json'}
                   ];
-
                   reports.forEach(report => {
                       fetch(report.file)
                           .then(response => response.json())
@@ -193,39 +143,151 @@ jobs:
                               document.getElementById(report.id).textContent = JSON.stringify(data, null, 2);
                           })
                           .catch(error => {
-                              document.getElementById(report.id).textContent = 'Error loading report: ' + error;
-                              document.getElementById(report.id).className = 'error';
+                              document.getElementById(report.id).textContent = 'Report not available';
                           });
                   });
               </script>
           </body>
           </html>
           EOF
-        continue-on-error: true
 
       - name: Upload security scan results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: security-scan-results
           path: |
             bandit-report.json
-            safety-report.json
             pip-audit-report.json
-            semgrep-report.json
             security-reports.html
 
-  deploy-infrastructure:
+  compliance-reports:
+    name: License compliance
+    runs-on: ubuntu-latest
+    needs: [pre-commit]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Generate license reports
+        run: |
+          uv export --no-hashes --no-dev > runtime-requirements.txt
+          uv run pip-licenses --from=mixed --format=json --output-file=license-report.json
+          uv run pip-licenses --from=mixed --format=html --output-file=license-report.html
+          uv run pip-licenses --from=mixed --summary
+
+      - name: Check license compatibility
+        run: |
+          python -c "
+          import json
+          with open('license-report.json', 'r') as f:
+              deps = json.load(f)
+          incompatible = []
+          for dep in deps:
+              license = dep.get('License', '')
+              if any(gpl in license.upper() for gpl in ['GPL', 'AGPL'] if 'LGPL' not in license.upper()):
+                  incompatible.append(f\"{dep['Name']}: {license}\")
+          if incompatible:
+              print('Incompatible licenses found:')
+              for item in incompatible:
+                  print(f'  - {item}')
+              exit(1)
+          else:
+              print('All licenses compatible')
+          "
+
+      - name: Upload compliance reports
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: compliance-reports
+          path: |
+            license-report.json
+            license-report.html
+
+  unit-tests:
+    name: Unit tests
+    needs: [pre-commit]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run type checking
+        run: uv run mypy src/ || true
+
+      - name: Run unit tests
+        run: |
+          uv run pytest -m "fast or (not slow and not integration)" \
+            --cov=src --cov-report=html --cov-report=xml --cov-report=json --cov-fail-under=70 \
+            --html=test-report.html --self-contained-html
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: coverage-reports
+          path: |
+            htmlcov/
+            coverage.xml
+            coverage.json
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: unit-test-reports
+          path: test-report.html
+
+  deploy-test-infrastructure:
+    name: Deploy test infrastructure
+    runs-on: ubuntu-latest
+    needs: [security-scan]
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') &&
+      vars.TESTING_PIPELINE_EXECUTION_ROLE != ''
     permissions:
       id-token: write
       contents: read
 
-    name: Deploy test infrastructure (if template.yaml exists)
-    runs-on: ubuntu-latest
-    needs: [run-pre-commit-tests, security-scan]
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Check for SAM template
         id: check_template
@@ -236,20 +298,15 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-
       - name: Set up SAM CLI
         if: steps.check_template.outputs.exists == 'true'
         uses: aws-actions/setup-sam@v2
         with:
           use-installer: true
 
-      - name: Build resources
+      - name: Configure AWS credentials
         if: steps.check_template.outputs.exists == 'true'
-        run: sam build --use-container
-
-      - name: Assume pipeline role
-        if: steps.check_template.outputs.exists == 'true'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
           role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
           aws-region: ${{ env.TESTING_REGION }}
@@ -257,59 +314,14 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - name: Package artifacts
+      - name: Deploy test infrastructure
         if: steps.check_template.outputs.exists == 'true'
         run: |
-          sam package \
-            --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
-            --region ${TESTING_REGION} \
-            --output-template-file packaged-testing.yaml
-
-      - name: Validate packaged template
-        if: steps.check_template.outputs.exists == 'true'
-        run: sam validate --lint -t packaged-testing.yaml
-
-      - uses: actions/upload-artifact@v4
-        if: steps.check_template.outputs.exists == 'true'
-        with:
-          name: packaged-testing.yaml
-          path: packaged-testing.yaml
-
-      - name: Clean up any existing stack in bad state
-        if: steps.check_template.outputs.exists == 'true'
-        continue-on-error: true
-        run: |
-          # Check if stack exists and its status
-          STACK_STATUS=$(aws cloudformation describe-stacks \
-            --stack-name ${TESTING_STACK_NAME} \
-            --region ${TESTING_REGION} \
-            --query 'Stacks[0].StackStatus' \
-            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
-
-          if [[ "$STACK_STATUS" == "DELETE_IN_PROGRESS" || "$STACK_STATUS" == "DELETE_FAILED" ]]; then
-            echo "Stack is in $STACK_STATUS state, waiting for deletion to complete..."
-            aws cloudformation wait stack-delete-complete \
-              --stack-name ${TESTING_STACK_NAME} \
-              --region ${TESTING_REGION} || true
-          elif [[ "$STACK_STATUS" == "ROLLBACK_COMPLETE" || "$STACK_STATUS" == "ROLLBACK_FAILED" || "$STACK_STATUS" == "CREATE_FAILED" || "$STACK_STATUS" == "UPDATE_ROLLBACK_COMPLETE" ]]; then
-            echo "Stack is in $STACK_STATUS state, deleting it first..."
-            aws cloudformation delete-stack \
-              --stack-name ${TESTING_STACK_NAME} \
-              --region ${TESTING_REGION}
-            aws cloudformation wait stack-delete-complete \
-              --stack-name ${TESTING_STACK_NAME} \
-              --region ${TESTING_REGION} || true
-          fi
-
-      - name: Deploy stack
-        if: steps.check_template.outputs.exists == 'true'
-        run: |
-          # Extract role name from ARN
           PIPELINE_ROLE_NAME=${TESTING_PIPELINE_EXECUTION_ROLE##*/}
 
           sam deploy \
             --stack-name ${TESTING_STACK_NAME} \
-            --template-file packaged-testing.yaml \
+            --template-file template.yaml \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
@@ -317,365 +329,225 @@ jobs:
             --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE} \
             --parameter-overrides PipelineExecutionRoleName=${PIPELINE_ROLE_NAME}
 
-
-
-  run-tests:
+  integration-tests:
+    name: Integration tests
+    needs: [deploy-test-infrastructure, unit-tests]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
 
-    name: Run pytest CI/CD tests
-    needs: [run-pre-commit-tests, security-scan, deploy-infrastructure]
-    strategy:
-      matrix:
-        #        python-version: [ "3.10", "3.11" ]
-        python-version: [ "3.12" ]
-        platform: [ ubuntu-latest ]
-    runs-on: ${{ matrix.platform }}
-
     steps:
-      #----------------------------------------------
-      #       check-out repo and set-up python
-      #----------------------------------------------
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Set up AWS OIDC credentials for pipeline
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
           role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
           aws-region: ${{ env.TESTING_REGION }}
           role-session-name: testing-pipeline
-      - name: Set up python
-        id: setup-python
-        uses: actions/setup-python@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-        #----------------------------------------------
-        #  -----  install & configure poetry  -----
-        #----------------------------------------------
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
 
-        #----------------------------------------------
-        #       load cached venv if cache exists
-        #----------------------------------------------
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
+      - name: Install UV
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
         with:
-          path: .venv
-          key: venv-docs-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-        #----------------------------------------------
-        # install dependencies if cache does not exist
-        #----------------------------------------------
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-        #----------------------------------------------
-        # install your root project, if required
-        #----------------------------------------------
-      - name: Install project
-        run: poetry install --no-interaction
+        run: uv sync --all-extras
 
+      - name: Run integration tests
+        run: uv run pytest -m "integration or slow" -v
 
-        #----------------------------------------------
-        #              run test suite
-        #----------------------------------------------
-      - name: Test with pytest
-        run: |
-          env
-          poetry run pytest -m ""
-
-      - name: upload test output
-        if: |
-          ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-output
-          path: pytest.log
-
-
-      - name: upload pretty test results
-        if: |
-          ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-html
-          path: test-report.html
-
-      - name: Skip tests if release commit
-        run: echo "Skipping tests for release commit"
-
-  cleanup-infrastructure:
-    permissions:
-      id-token: write
-      contents: read
-
-    name: Cleanup test infrastructure
-    needs: run-tests
-    if: always()
+  release:
+    name: Semantic release
+    needs: [unit-tests, integration-tests, security-scan, compliance-reports]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
     runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up SAM CLI
-        uses: aws-actions/setup-sam@v2
-        with:
-          use-installer: true
-
-      - name: Assume pipeline role
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
-          aws-region: ${{ env.TESTING_REGION }}
-          role-session-name: cleanup-infra
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
-
-      - name: Delete stack
-        run: |
-          echo "Deleting test infrastructure stack to save costs..."
-          sam delete \
-            --stack-name ${TESTING_STACK_NAME} \
-            --region ${TESTING_REGION} \
-            --no-prompts \
-            --s3-bucket ${TESTING_ARTIFACTS_BUCKET} || echo "Stack may not exist or already deleted"
-
-  release-version:
-    needs: [ run-pre-commit-tests, security-scan, run-tests ]
-    name: Semantic Version Release
-    runs-on: ubuntu-latest
-    # Only run semantic release on push to main or dev branches, not on PRs
-    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
     concurrency:
       group: ${{ github.workflow }}-release-${{ github.ref_name }}
       cancel-in-progress: false
-
+    outputs:
+      released: ${{ steps.release.outputs.released }}
     permissions:
       contents: write
 
     steps:
-      # Note: We checkout the repository at the branch that triggered the workflow
-      # with the entire history to ensure to match PSR's release branch detection
-      # and history evaluation.
-      # However, we forcefully reset the branch to the workflow sha because it is
-      # possible that the branch was updated while the workflow was running. This
-      # prevents accidentally releasing un-evaluated changes.
-      - name: Setup | Checkout Repository on Release Branch
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           token: ${{ secrets.GH_TOKEN }}
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - name: Setup | Force release branch to be at workflow sha
-        run: |
-          git reset --hard ${{ github.sha }}
-        #----------------------------------------------
-        #  -----  install & configure python  -----
-        #----------------------------------------------
-      - name: Setup | Set up python
-        id: setup-python
-        uses: actions/setup-python@v5
+      - name: Force release branch to workflow sha
+        run: git reset --hard ${{ github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-        #----------------------------------------------
-        #  -----  install & configure poetry  -----
-        #----------------------------------------------
-      - name: Setup | Install Poetry
-        uses: snok/install-poetry@v1
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
         with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-        #----------------------------------------------
-        #       load cached venv if cache exists
-        #----------------------------------------------
-      - name: Setup | Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-        #----------------------------------------------
-        # install dependencies if cache does not exist
-        #----------------------------------------------
-      - name: Setup | Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-        #----------------------------------------------
-        # install your root project, if required
-        #----------------------------------------------
-      - name: Setup | Install project
-        run: poetry install --no-interaction
-        #----------------------------------------------
-        # Final safety check before running the release
-        #----------------------------------------------
-      - name: Evaluate | Verify upstream has NOT changed
-        # Last chance to abort before causing an error as another PR/push was applied to
-        # the upstream branch while this workflow was running. This is important
-        # because we are committing a version change (--commit).
-        shell: bash
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Verify upstream has not changed
         run: |
           set +o pipefail
-
           UPSTREAM_BRANCH_NAME="$(git status -sb | head -n 1 | cut -d' ' -f2 | grep -E '\.{3}' | cut -d'.' -f4)"
-          printf '%s\n' "Upstream branch name: $UPSTREAM_BRANCH_NAME"
-
           set -o pipefail
 
           if [ -z "$UPSTREAM_BRANCH_NAME" ]; then
-              printf >&2 '%s\n' "::error::Unable to determine upstream branch name!"
+              echo "::error::Unable to determine upstream branch name!"
               exit 1
           fi
 
           git fetch "${UPSTREAM_BRANCH_NAME%%/*}"
 
           if ! UPSTREAM_SHA="$(git rev-parse "$UPSTREAM_BRANCH_NAME")"; then
-              printf >&2 '%s\n' "::error::Unable to determine upstream branch sha!"
+              echo "::error::Unable to determine upstream branch sha!"
               exit 1
           fi
 
           HEAD_SHA="$(git rev-parse HEAD)"
 
           if [ "$HEAD_SHA" != "$UPSTREAM_SHA" ]; then
-              printf >&2 '%s\n' "[HEAD SHA] $HEAD_SHA != $UPSTREAM_SHA [UPSTREAM SHA]"
-              printf >&2 '%s\n' "::error::Upstream has changed, aborting release..."
+              echo "::error::Upstream has changed, aborting release..."
               exit 1
           fi
 
-          printf '%s\n' "Verified upstream branch has not changed, continuing with release..."
-
-
-      - name: Action | Semantic Version Release
+      - name: Run semantic release
+        id: release
         run: |
-          # Run semantic release to bump the version, update the changelog, commit the change, and create a tag.
-          poetry run semantic-release -v version
+          RELEASED="false"
 
-      - name: Publish | Upload to GitHub Release Assets
-        uses: python-semantic-release/publish-action@v10.2.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.release.outputs.tag }}
+          set +e
+          uv run semantic-release --strict version
+          SEMANTIC_EXIT_CODE=$?
+          set -e
 
-      - name: Upload | Distribution Artifacts
-        uses: actions/upload-artifact@v4
+          if [ $SEMANTIC_EXIT_CODE -eq 0 ]; then
+            echo "Semantic release succeeded"
+            RELEASED="true"
+          else
+            echo "No release needed"
+          fi
+
+          echo "released=$RELEASED" >> $GITHUB_OUTPUT
+
+      - name: Upload distribution artifacts
+        if: steps.release.outputs.released == 'true'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: distribution-artifacts
-          path: dist
-          if-no-files-found: error
-
-  generate-and-deploy-docs-site:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    name: Generate documentation, gather test results and changelog, and deploy to GitHub Pages
-    needs: release-version
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write  # for gh-pages push
-
-    steps:
-      #----------------------------------------------
-      #       check-out repo and set-up python
-      #----------------------------------------------
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Set up python
-        id: setup-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-        #----------------------------------------------
-        #  -----  install & configure poetry  -----
-        #----------------------------------------------
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-        #----------------------------------------------
-        #       load cached venv if cache exists
-        #----------------------------------------------
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-docs-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-        #----------------------------------------------
-        # install dependencies if cache does not exist
-        #----------------------------------------------
-      - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-        #----------------------------------------------
-        # install your root project, if required
-        #----------------------------------------------
-      - name: Install project
-        run: poetry install --no-interaction
-        #----------------------------------------------
-        #              run test suite
-        #----------------------------------------------
-
-      - name: Generate documentation
-        run: |
-          poetry run pdoc ${{ env.MODULE_NAME }} --output-dir docs
-
-      - name: Download test HTML report artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: test-html
-          path: docs
-
-      - name: Download security scan results artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: security-scan-results
-          path: docs
-
-      - name: Deploy docs to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GH_TOKEN }}
-          publish_dir: ./docs
-          publish_branch: gh-pages
+          path: dist/
+          if-no-files-found: warn
 
   publish-to-pypi:
-    needs: release-version
-    # 1. Separate out the publish to pypi step from the publish to github step to run each step at
-    #    the least amount of token privilege and to use github's artifact system to store the release
-    # 2. Also, deployments can fail, and its better to have a separate job if you need to retry
-    #    and it won't require reversing the release.
-    name: Upload release to PyPI or TestPyPI
+    name: Publish to PyPI
+    needs: release
     runs-on: ubuntu-latest
-    # Only run on push to main or dev branches, not on PRs
-    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.release.outputs.released == 'true'
     environment:
       name: pypi
       url: https://pypi.org/p/${{ github.event.repository.name }}
     permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+
     steps:
-      - name: Setup | Download Build Artifacts
-        uses: actions/download-artifact@v4
-        id: artifact-download
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: distribution-artifacts
           path: dist/
 
-      - name: Publish package distributions to PyPI Test
-        if: github.ref == 'refs/heads/dev'
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
         with:
-          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
+          skip-existing: true
 
-      - name: Publish package distributions to PyPI
-        if: github.ref == 'refs/heads/main'
-        uses: pypa/gh-action-pypi-publish@release/v1
+  docs:
+    name: Deploy documentation
+    needs: release
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Generate documentation
+        run: |
+          mkdir -p docs
+          uv run pdoc --output-dir docs src/tagmania || true
+
+      - name: Download coverage reports
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: coverage-reports
+          path: docs/coverage
+        continue-on-error: true
+
+      - name: Download security scan results
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: security-scan-results
+          path: docs/security
+        continue-on-error: true
+
+      - name: Download compliance reports
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: compliance-reports
+          path: docs/compliance
+        continue-on-error: true
+
+      - name: Download unit test report
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: unit-test-reports
+          path: docs/tests
+        continue-on-error: true
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages

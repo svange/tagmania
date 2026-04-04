@@ -139,9 +139,9 @@ class TestSnapshotManagerCLI:
             # Just verify the restore completed successfully without waiting for start
             # (The CLI output already confirms the restore worked)
             stopped_instances = cluster2.get_stopped_instances()
-            assert (
-                len(stopped_instances) >= 1
-            ), "At least one instance should be stopped after restore"
+            assert len(stopped_instances) >= 1, (
+                "At least one instance should be stopped after restore"
+            )
 
         finally:
             # Cleanup: delete test snapshots
@@ -191,8 +191,7 @@ class TestSnapshotManagerCLI:
 
         assert result.returncode != 0
         assert (
-            "not allowed" in result.stderr.lower()
-            or "mutually exclusive" in result.stderr.lower()
+            "not allowed" in result.stderr.lower() or "mutually exclusive" in result.stderr.lower()
         )
 
     def test_target_only_with_restore(self):
