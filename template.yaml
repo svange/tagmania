@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Test infrastructure for tagmania - 2 clusters with different instance counts
+Description: Test infrastructure for tagmania - 3 clusters for parallel integration testing
 
 Parameters:
   Cluster1Name:
@@ -12,6 +12,11 @@ Parameters:
     Type: String
     Default: test2
     Description: Name of the second test cluster (2 instances)
+
+  Cluster3Name:
+    Type: String
+    Default: test3
+    Description: Name of the third test cluster (1 instance, for CLI tests)
 
   PipelineExecutionRoleName:
     Type: String
@@ -99,14 +104,14 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
-      ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2 AMI (us-east-1)
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
         - !Ref TestSecurityGroup
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: 8
+            VolumeSize: 2
             VolumeType: gp3
             DeleteOnTermination: true
       Tags:
@@ -122,14 +127,14 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
-      ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2 AMI (us-east-1)
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
         - !Ref TestSecurityGroup
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: 8
+            VolumeSize: 2
             VolumeType: gp3
             DeleteOnTermination: true
       Tags:
@@ -144,14 +149,14 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
-      ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2 AMI (us-east-1)
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
         - !Ref TestSecurityGroup
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: 8
+            VolumeSize: 2
             VolumeType: gp3
             DeleteOnTermination: true
       Tags:
@@ -159,6 +164,29 @@ Resources:
           Value: !Sub "${Cluster2Name}-db-01"
         - Key: Cluster
           Value: !Ref Cluster2Name
+        - Key: Owner
+          Value: test
+
+  # Cluster 3 - Two Instances (for CLI tests, runs in parallel with Cluster 2)
+  Cluster3Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
+      SubnetId: !Ref TestSubnet
+      SecurityGroupIds:
+        - !Ref TestSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 2
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster3Name}-api-01"
+        - Key: Cluster
+          Value: !Ref Cluster3Name
         - Key: Owner
           Value: test
 
@@ -188,7 +216,7 @@ Resources:
             Resource: "*"
             Condition:
               StringEquals:
-                ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name]
+                ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name, !Ref Cluster3Name]
           - Sid: EC2VolumeTaggedOperations
             Effect: Allow
             Action:
@@ -199,7 +227,7 @@ Resources:
             Resource: "*"
             Condition:
               StringEquals:
-                ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name]
+                ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name, !Ref Cluster3Name]
           - Sid: EC2VolumeUntaggedOperations
             Effect: Allow
             Action:
@@ -262,6 +290,18 @@ Outputs:
     Value: !Ref Cluster2Instance2
     Export:
       Name: !Sub "${AWS::StackName}-Cluster2Instance2"
+
+  Cluster3Name:
+    Description: Name of the third test cluster
+    Value: !Ref Cluster3Name
+    Export:
+      Name: !Sub "${AWS::StackName}-Cluster3Name"
+
+  Cluster3Instance1Id:
+    Description: Cluster 3 Instance 1 ID
+    Value: !Ref Cluster3Instance1
+    Export:
+      Name: !Sub "${AWS::StackName}-Cluster3Instance1"
 
   EC2TestingPolicyArn:
     Description: ARN of the EC2 testing policy attached to pipeline execution role

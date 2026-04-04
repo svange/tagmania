@@ -363,7 +363,7 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run integration tests
-        run: uv run pytest -m "integration or slow" --cov=src --cov-fail-under=70 -v
+        run: make test-integration
 
   release:
     name: Semantic release

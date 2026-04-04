@@ -155,6 +155,22 @@ class ClusterSet:
         # Return a copy to defend against modifications
         return self._cluster_filter.copy()
 
+    def _wait_instances_running(self, instance_ids: list[str]) -> None:
+        """Wait for instances to reach running state using 5s polling."""
+        waiter = self._ec2_client.get_waiter("instance_running")
+        waiter.wait(
+            InstanceIds=instance_ids,
+            WaiterConfig={"Delay": 5, "MaxAttempts": 120},
+        )
+
+    def _wait_instances_stopped(self, instance_ids: list[str]) -> None:
+        """Wait for instances to reach stopped state using 5s polling."""
+        waiter = self._ec2_client.get_waiter("instance_stopped")
+        waiter.wait(
+            InstanceIds=instance_ids,
+            WaiterConfig={"Delay": 5, "MaxAttempts": 120},
+        )
+
     def get_instances(self) -> list[Any]:
         """Get all EC2 instances belonging to this cluster set.
 
@@ -368,12 +384,9 @@ class ClusterSet:
                 name = TagSet(i.tags).get("Name")
                 print(f"Starting {name} ({i.id})")
                 i.start()
-            # Wait for instances to start. Call in separate loop because we want
-            # to issue the start commands asynchronously rather than waiting for
-            # each instance to start before issuing the next one.
+            # Wait for all instances in one batch call with 5s polling
             print(f"Waiting for {len(instances)} instances to start...")
-            for i in instances:
-                i.wait_until_running()
+            self._wait_instances_running([i.id for i in instances])
 
     def stop_instances(self) -> None:
         """
@@ -394,12 +407,9 @@ class ClusterSet:
                 name = TagSet(i.tags).get("Name")
                 print(f"Stopping {name} ({i.id})")
                 i.stop()
-            # Wait for instances to stop. Call in separate loop because we want
-            # to issue the stop commands asynchronously rather than waiting for
-            # each instance to stop before issuing the next one.
+            # Wait for all instances in one batch call with 5s polling
             print(f"Waiting for {len(instances)} instances to stop...")
-            for i in instances:
-                i.wait_until_stopped()
+            self._wait_instances_stopped([i.id for i in instances])
 
     def tag_instances(self, tags: list[dict[str, str]]) -> None:
         # The resource API is somewhat less efficient than the low-level client
@@ -590,6 +600,7 @@ class ClusterSet:
             volume = self._ec2.create_volume(
                 SnapshotId=snapshot.id,
                 AvailabilityZone=avail_zone,
+                VolumeInitializationRate=300,
                 TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],
             )
             volume_ids.append(volume.id)
@@ -597,11 +608,7 @@ class ClusterSet:
         if len(volume_ids) > 0:
             print(f"Waiting for {len(volume_ids)} volumes to be created...")
             self.wait_for_volumes(volume_ids, "volume_available")
-            # When attaching newly created volumes later, not all volumes are
-            # being attached for some reason. Perhaps the waiter returns before
-            # the tags have actually been applied. Try giving ten more seconds
-            # for the tags to be applied.
-            time.sleep(10)
+            self._wait_for_volume_tags(volume_ids)
 
     def delete_volumes(self) -> None:
         """
@@ -721,10 +728,24 @@ class ClusterSet:
         waiter.wait(
             VolumeIds=volume_ids,
             WaiterConfig={
-                # 'Delay': 15  # This is the default in seconds
-                "MaxAttempts": 240  # This will give AWS an hour
+                "Delay": 5,
+                "MaxAttempts": 240,
             },
         )
+
+    def _wait_for_volume_tags(
+        self, volume_ids: list[str], expected_tag_key: str = "Cluster"
+    ) -> None:
+        """Poll until volumes have their tags propagated (up to 10s)."""
+        for _attempt in range(5):
+            response = self._ec2_client.describe_volumes(VolumeIds=volume_ids)
+            all_tagged = all(
+                any(t["Key"] == expected_tag_key for t in vol.get("Tags", []))
+                for vol in response["Volumes"]
+            )
+            if all_tagged:
+                return
+            time.sleep(2)
 
     def get_snapshots(self, label: str | None = None) -> list[Any]:
         """
@@ -802,8 +823,8 @@ class ClusterSet:
         waiter.wait(
             SnapshotIds=snapshot_ids,
             WaiterConfig={
-                # 'Delay': 15  # This is the default in seconds
-                "MaxAttempts": 240  # This will give AWS an hour
+                "Delay": 5,
+                "MaxAttempts": 720,
             },
         )
 
@@ -925,10 +946,9 @@ class ClusterSet:
                 name = TagSet(i.tags).get("Name")
                 print(f"Stopping {name} ({i.id})")
                 i.stop()
-            # Wait for instances to stop
+            # Wait for all instances in one batch call with 5s polling
             print(f"Waiting for {len(instances)} instances to stop...")
-            for i in instances:
-                i.wait_until_stopped()
+            self._wait_instances_stopped([i.id for i in instances])
 
     def start_instances_targeted(self, name_pattern: str) -> None:
         """
@@ -951,10 +971,9 @@ class ClusterSet:
                 name = TagSet(i.tags).get("Name")
                 print(f"Starting {name} ({i.id})")
                 i.start()
-            # Wait for instances to start
+            # Wait for all instances in one batch call with 5s polling
             print(f"Waiting for {len(instances)} instances to start...")
-            for i in instances:
-                i.wait_until_running()
+            self._wait_instances_running([i.id for i in instances])
 
     def detach_volumes_targeted(self, name_pattern: str) -> None:
         """
@@ -1101,6 +1120,7 @@ class ClusterSet:
             volume = self._ec2.create_volume(
                 SnapshotId=snapshot.id,
                 AvailabilityZone=avail_zone,
+                VolumeInitializationRate=300,
                 TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],
             )
             volume_ids.append(volume.id)
@@ -1109,7 +1129,7 @@ class ClusterSet:
         if len(volume_ids) > 0:
             print(f"Waiting for {len(volume_ids)} volumes to be created...")
             self.wait_for_volumes(volume_ids, "volume_available")
-            time.sleep(10)
+            self._wait_for_volume_tags(volume_ids)
 
     def attach_volumes_targeted(self, label: str, name_pattern: str) -> None:
         """

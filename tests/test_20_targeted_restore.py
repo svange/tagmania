@@ -4,6 +4,7 @@ from tagmania.iac_tools.clusterset import ClusterSet
 
 
 @pytest.mark.integration
+@pytest.mark.cluster2
 class TestTargetedRestore:
     """
     Test targeted restore functionality with regex filtering.
@@ -11,11 +12,6 @@ class TestTargetedRestore:
     - test1: 1 instance (test1-web-01)
     - test2: 2 instances (test2-api-01, test2-db-01)
     """
-
-    @pytest.fixture
-    def cluster1(self):
-        """ClusterSet for test1 cluster (1 instance)"""
-        return ClusterSet("test1")
 
     @pytest.fixture
     def cluster2(self):
@@ -112,30 +108,6 @@ class TestTargetedRestore:
                 break
         assert running_name == "test2-db-01", f"Expected db instance running, got {running_name}"
 
-    @pytest.mark.slow
-    def test_cross_cluster_isolation(self, cluster1, cluster2):
-        """Test that targeted operations don't affect other clusters"""
-        # Ensure both clusters are running
-        cluster1.start_instances()
-        cluster2.start_instances()
-
-        # Stop instances in cluster2 only
-        cluster2.stop_instances_targeted("test2-.*")
-
-        # Verify cluster1 instances are still running
-        cluster1_running = cluster1.get_running_instances()
-        cluster1_stopped = cluster1.get_stopped_instances()
-
-        assert len(cluster1_running) == 1, "Cluster1 instance should still be running"
-        assert len(cluster1_stopped) == 0, "Cluster1 should have no stopped instances"
-
-        # Verify cluster2 instances are stopped
-        cluster2_running = cluster2.get_running_instances()
-        cluster2_stopped = cluster2.get_stopped_instances()
-
-        assert len(cluster2_running) == 0, "Cluster2 should have no running instances"
-        assert len(cluster2_stopped) == 2, "Cluster2 should have 2 stopped instances"
-
     def test_targeted_no_instances_found(self, cluster2):
         """Test targeted operations when no instances match pattern"""
         # This should not raise an error, just print a message
@@ -198,19 +170,11 @@ class TestTargetedRestore:
         with pytest.raises(ValueError, match="Invalid regex pattern"):
             cluster2.attach_volumes_targeted("test", "[invalid")
 
-    def test_cleanup_after_tests(self, cluster1, cluster2):
-        """Cleanup test resources"""
-        # Ensure all instances are running for next tests
-        cluster1.start_instances()
+    def test_cleanup_after_tests(self, cluster2):
+        """Cleanup test2 resources"""
         cluster2.start_instances()
-
-        # Delete any test snapshots that might remain
-        try:
-            cluster1.delete_snapshots("test-targeted")
-        except Exception:
-            pass  # Ignore if snapshots don't exist
 
         try:
             cluster2.delete_snapshots("test-targeted")
         except Exception:
-            pass  # Ignore if snapshots don't exist
+            pass

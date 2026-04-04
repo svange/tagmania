@@ -1,4 +1,4 @@
-.PHONY: help install test test-unit test-integration test-coverage test-fast format security typecheck build clean deploy destroy version release-dry-run
+.PHONY: help install test test-unit test-integration test-integration-check test-coverage test-fast format security typecheck build clean deploy destroy version release-dry-run
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -14,8 +14,25 @@ test: ## Run all tests
 test-unit: ## Run unit tests only
 	uv run pytest -m "fast or (not slow and not integration)" --cov=src --cov-report=html --cov-report=xml
 
-test-integration: ## Run integration tests (requires AWS credentials)
-	uv run pytest -m "integration or slow" -v
+test-integration: test-integration-check ## Run integration tests in parallel by cluster (requires AWS credentials)
+	@echo "=== Running cluster1, cluster2, and cluster3 tests in parallel ==="
+	@uv run pytest -m "cluster1 and (integration or slow)" -v --tb=short & \
+	PID1=$$!; \
+	uv run pytest -m "cluster2 and (integration or slow)" -v --tb=short & \
+	PID2=$$!; \
+	uv run pytest -m "cluster3 and (integration or slow)" -v --tb=short & \
+	PID3=$$!; \
+	wait $$PID1; EC1=$$?; \
+	wait $$PID2; EC2=$$?; \
+	wait $$PID3; EC3=$$?; \
+	echo "=== Running cross-cluster tests ===" ; \
+	uv run pytest -m "cluster_all and (integration or slow)" -v --tb=short; \
+	EC4=$$?; \
+	[ $$EC1 -eq 0 ] && [ $$EC2 -eq 0 ] && [ $$EC3 -eq 0 ] && [ $$EC4 -eq 0 ]
+
+test-integration-check: ## Verify all integration tests have a cluster marker
+	@uv run pytest --collect-only -q -m "(integration or slow) and not (cluster1 or cluster2 or cluster3 or cluster_all)" 2>/dev/null; \
+	if [ $$? -ne 5 ]; then echo "ERROR: Found integration tests without a cluster marker!" && exit 1; fi
 
 test-coverage: ## Run tests with coverage report
 	uv run pytest --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-fail-under=70

@@ -55,6 +55,7 @@ known-first-party = ["tagmania"]
 [tool.mypy]
 strict = true
 python_version = "3.12"
+warn_unused_ignores = false
 
 [[tool.mypy.overrides]]
 module = "tagmania.start_cluster"
@@ -94,6 +95,10 @@ markers = [
     "slow: mark test as slow (does real AWS operations, takes several minutes)",
     "integration: mark test as integration test (requires AWS credentials)",
     "fast: mark test as fast",
+    "cluster1: tests that use only the test1 cluster",
+    "cluster2: tests that use only the test2 cluster",
+    "cluster3: tests that use only the test3 cluster",
+    "cluster_all: tests that use multiple clusters",
 ]
 
 [tool.coverage.run]

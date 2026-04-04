@@ -7,16 +7,17 @@ import pytest
 from tagmania.iac_tools.clusterset import ClusterSet
 
 
+@pytest.mark.cluster3
 class TestSnapshotManagerCLI:
     """
     Test the snapshot_manager CLI with --target functionality.
-    Uses the deployed test infrastructure with 2 clusters.
+    Uses the deployed test infrastructure with test3 cluster.
     """
 
     @pytest.fixture
-    def cluster2(self):
-        """ClusterSet for test2 cluster (2 instances)"""
-        return ClusterSet("test2")
+    def cluster3(self):
+        """ClusterSet for test3 cluster (2 instances)"""
+        return ClusterSet("test3")
 
     def run_snapshot_manager(self, args):
         """Helper to run snapshot_manager with given arguments"""
@@ -52,7 +53,7 @@ class TestSnapshotManagerCLI:
                 "[invalid",
                 "--name",
                 "test",
-                "test2",
+                "test3",
             ],
             capture_output=True,
             text=True,
@@ -75,7 +76,7 @@ class TestSnapshotManagerCLI:
                 "nonexistent",
                 "--name",
                 "test",
-                "test2",
+                "test3",
             ],
             capture_output=True,
             text=True,
@@ -87,10 +88,10 @@ class TestSnapshotManagerCLI:
         assert "Operation aborted" in result.stdout
 
     @pytest.mark.slow
-    def test_full_cli_targeted_workflow(self, cluster2):
+    def test_full_cli_targeted_workflow(self, cluster3):
         """Test complete CLI workflow with targeted restore"""
         # Ensure instances are running
-        cluster2.start_instances()
+        cluster3.start_instances()
 
         # Step 1: Create a backup using CLI
         result = subprocess.run(
@@ -101,7 +102,7 @@ class TestSnapshotManagerCLI:
                 "--backup",
                 "--name",
                 "cli-test",
-                "test2",
+                "test3",
             ],
             capture_output=True,
             text=True,
@@ -124,7 +125,7 @@ class TestSnapshotManagerCLI:
                     ".*-api-.*",
                     "--name",
                     "cli-test",
-                    "test2",
+                    "test3",
                 ],
                 capture_output=True,
                 text=True,
@@ -134,13 +135,13 @@ class TestSnapshotManagerCLI:
 
             # The CLI should show the filtered instances and complete successfully
             assert "Found 1 instances matching pattern" in result.stdout
-            assert "test2-api-01" in result.stdout
+            assert "test3-api-01" in result.stdout
             assert "Operation completed successfully" in result.stdout
 
             # After targeted restore, instances should be stopped (as per snapshot_manager behavior)
             # Just verify the restore completed successfully without waiting for start
             # (The CLI output already confirms the restore worked)
-            stopped_instances = cluster2.get_stopped_instances()
+            stopped_instances = cluster3.get_stopped_instances()
             assert len(stopped_instances) >= 1, (
                 "At least one instance should be stopped after restore"
             )
@@ -155,7 +156,7 @@ class TestSnapshotManagerCLI:
                     "--delete",
                     "--name",
                     "cli-test",
-                    "test2",
+                    "test3",
                 ],
                 capture_output=True,
                 text=True,
@@ -167,14 +168,14 @@ class TestSnapshotManagerCLI:
     def test_list_snapshots_cli(self):
         """Test listing snapshots via CLI"""
         result = subprocess.run(
-            [sys.executable, "-m", "tagmania.snapshot_manager", "--list", "test2"],
+            [sys.executable, "-m", "tagmania.snapshot_manager", "--list", "test3"],
             capture_output=True,
             text=True,
             check=False,
         )
 
         assert result.returncode == 0
-        assert "Listing all snapshots associated with test2" in result.stdout
+        assert "Listing all snapshots associated with test3" in result.stdout
 
     def test_mutually_exclusive_args(self):
         """Test that backup, restore, delete, and list are mutually exclusive"""
@@ -185,7 +186,7 @@ class TestSnapshotManagerCLI:
                 "tagmania.snapshot_manager",
                 "--backup",
                 "--restore",
-                "test2",
+                "test3",
             ],
             capture_output=True,
             text=True,
@@ -211,7 +212,7 @@ class TestSnapshotManagerCLI:
                 "test.*",
                 "--name",
                 "test",
-                "test2",
+                "test3",
             ],
             capture_output=True,
             text=True,
