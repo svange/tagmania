@@ -25,20 +25,36 @@ uv run pytest tests/test_10_cluster_set.py::TestBasicClusterOperations::test_clu
 
 Pre-commit hooks run automatically: ruff format, ruff check (with `--fix`), mypy, uv lock check, and standard checks (trailing whitespace, merge conflicts, private key detection, .env file blocking). Run manually with `make format` or `uv run pre-commit run --all-files`.
 
-## CRITICAL: No Rebase on Main
+## Critical Rules
 
-**NEVER use `git pull --rebase` or `git rebase` on `main`.** This repo uses CI and rewriting history on main breaks it. Always use merge commits.
+- **No rebase on main**: NEVER use `git pull --rebase` or `git rebase` on `main`. This repo uses CI and rewriting history on main breaks it. Always use merge commits.
+- **No manual versioning**: NEVER manually edit version numbers. Python Semantic Release owns versioning.
+- **No lock file edits**: NEVER manually edit lock files (uv.lock, package-lock.json, poetry.lock, yarn.lock). They are auto-generated.
+- **No .env commits**: NEVER commit .env files. Use .env.example for templates.
+- **No force push to main**: NEVER use `git push --force` on main.
 
-## CRITICAL: Version Management
-
-**NEVER manually edit version numbers.** Python Semantic Release owns versioning.
-
-- Version in `pyproject.toml` and `src/tagmania/__init__.py`
+Version in `pyproject.toml` and `src/tagmania/__init__.py`:
 - Bumped automatically via conventional commits:
   - `fix:` -> patch (2.5.1 -> 2.5.2)
   - `feat:` -> minor (2.5.1 -> 2.6.0)
   - `feat!:` -> major (2.5.1 -> 3.0.0)
 - Tag format: `v{version}`
+
+## Conventions
+
+- **Branches**: `{type}/issue-N-description` where type is one of: feat, fix, docs, refactor, test, chore, ci, build, style, revert, perf.
+- **PRs**: Target the default development branch. Enable automerge.
+- **Pre-commit**: Run `uv run pre-commit run --all-files` explicitly before committing (no automatic git hooks -- they break across Windows/WSL). If checks fail, fix the issue and create a NEW commit (do not amend).
+- **Tests**: Write tests for all new functionality. Bug fixes require regression tests.
+
+## Development Workflow
+
+1. **Pick an issue**: Find or get assigned an issue to work on
+2. **Create a branch**: `git checkout -b feat/issue-N-description`
+3. **Develop**: Write code with tests, following project conventions
+4. **Check**: Run `uv run pre-commit run --all-files` and `uv run pytest`
+5. **Submit**: Commit with conventional messages, create PR
+6. **Monitor**: Watch CI pipeline, fix any failures
 
 ## Testing
 

@@ -13,11 +13,6 @@ Parameters:
     Default: test2
     Description: Name of the second test cluster (2 instances)
 
-  KeyPairName:
-    Type: String
-    Default: test
-    Description: EC2 Key Pair for SSH access
-
   PipelineExecutionRoleName:
     Type: String
     Description: Name of the pipeline execution role that needs EC2 testing permissions
@@ -108,7 +103,6 @@ Resources:
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
         - !Ref TestSecurityGroup
-      KeyName: !Ref KeyPairName
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -132,7 +126,6 @@ Resources:
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
         - !Ref TestSecurityGroup
-      KeyName: !Ref KeyPairName
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -155,7 +148,6 @@ Resources:
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
         - !Ref TestSecurityGroup
-      KeyName: !Ref KeyPairName
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
