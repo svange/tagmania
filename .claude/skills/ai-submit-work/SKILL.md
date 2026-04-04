@@ -6,6 +6,8 @@ argument-hint: "[--no-tests] [--no-security]"
 
 Run all status checks, fix issues, commit, push, and create an automerge PR: $ARGUMENTS
 
+> **Workflow automation:** This skill is part of an automated workflow. Auto-commit with generated messages (do NOT ask Accept/Edit/Abort). Auto-rebase when behind target. Auto-transition to pipeline monitoring after PR creation. Only stop and ask the user for: security findings, license compliance issues, test failures, rebase conflicts, and untracked file decisions.
+
 Mirrors the CI pipeline locally to catch issues before pushing. Handles file staging, conventional commits, branch updates, and PR creation.
 
 ## Usage Examples
@@ -23,6 +25,32 @@ CURRENT_BRANCH=$(git branch --show-current)
 **Verify work branch:**
 - If on `main`, `master`, `dev`, `develop`, or `staging`: **ABORT** with error "You're on $CURRENT_BRANCH. Create a work branch first with `/ai-prepare-branch`."
 - Must be on a feature/fix/etc. branch.
+
+**Verify branch is current with target:**
+```bash
+# Detect target branch
+TARGET=""
+for candidate in dev develop staging; do
+    if git show-ref --verify --quiet refs/remotes/origin/$candidate; then
+        TARGET=$candidate
+        break
+    fi
+done
+TARGET=${TARGET:-$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@' 2>/dev/null || echo "main")}
+
+git fetch origin $TARGET
+BEHIND=$(git rev-list --count HEAD..origin/$TARGET)
+if [ "$BEHIND" -gt 0 ]; then
+    echo "WARNING: Your branch is $BEHIND commits behind $TARGET."
+    echo "This usually means /ai-prepare-branch was not run before starting work."
+fi
+```
+
+If the branch is behind, automatically rebase:
+```bash
+git rebase origin/$TARGET
+```
+Report: "Rebased on $TARGET (was $BEHIND commits behind)." Do NOT ask the user to choose -- just rebase. If the rebase has conflicts, then stop and ask the user to resolve.
 
 **Verify there are changes:**
 ```bash
@@ -191,24 +219,24 @@ COMMIT_TYPE=$(echo "$BRANCH" | grep -oP '^[^/]+')
 - Description from diff summary and branch name
 - Footer: `Closes #N` (for fix/ branches) or `Refs #N` (for feat/ branches) if issue found
 
-### Present for approval:
+### Commit automatically:
+
+Generate the commit message and commit immediately. Show the message in the output so the user can see what was committed, but do NOT ask for approval. Do NOT present Accept/Edit/Abort options.
+
 ```
-Proposed commit message:
+Committed:
 ---
 feat(cli): add metrics dashboard endpoint
 
 Refs #42
 ---
-
-Accept / Edit / Abort?
 ```
 
-**Always ask for approval. Never auto-commit.**
-
-### Commit:
 ```bash
-git commit -m "<approved message>"
+git commit -m "<generated message>"
 ```
+
+**Do NOT ask for approval. Auto-commit with the generated message.** The user trusts the conventional commit format derived from the branch prefix and diff analysis.
 
 ## 5. Update Branch
 
@@ -271,7 +299,7 @@ PR_NUMBER=$(gh pr view --json number -q .number)
 gh pr merge --auto --squash $PR_NUMBER
 ```
 
-## 8. Final Output
+## 8. Final Output and Automatic Transition
 
 ```
 Submitted: feat(cli): add metrics dashboard endpoint
@@ -279,10 +307,10 @@ Submitted: feat(cli): add metrics dashboard endpoint
 PR: https://github.com/owner/repo/pull/99
 Target: dev
 Automerge: enabled (squash)
-Status checks: pending
-
-Next step: /ai-monitor-pipeline
+Status checks: monitoring...
 ```
+
+**Automatic next step:** After the PR is created and automerge is enabled, immediately invoke `/ai-monitor-pipeline` to watch the pipeline. Do NOT just print "Next step: /ai-monitor-pipeline" -- actually run it. The user expects the workflow to continue automatically.
 
 ## Error Handling
 - **Not on work branch**: Abort, suggest `/ai-prepare-branch`

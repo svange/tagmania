@@ -6,6 +6,8 @@ argument-hint: "[issue-number, description, or branch-name]"
 
 Create a feature branch from the correct base with proper setup: $ARGUMENTS
 
+> **Workflow automation:** This skill is part of an automated workflow. Make autonomous decisions where safe: auto-continue past pipeline warnings, auto-select obvious branch names. Only stop and ask the user when there is a genuinely ambiguous or destructive situation (uncommitted work on a different task, merge conflicts, ambiguous branch naming with no issue context).
+
 Handles both issue-based and ad-hoc branch creation. Automatically detects whether the repo uses a dev/staging branch or only main.
 
 ## Usage Examples
@@ -84,9 +86,9 @@ if ! git merge-base --is-ancestor origin/$DEFAULT_BRANCH origin/$DEV_BRANCH; the
     # Check if a CI/release pipeline is running on main
     MAIN_RUN_STATUS=$(gh run list --branch $DEFAULT_BRANCH --limit 1 --json status -q '.[0].status' 2>/dev/null)
     if [ "$MAIN_RUN_STATUS" = "in_progress" ] || [ "$MAIN_RUN_STATUS" = "queued" ]; then
-        echo "WARNING: A CI/release pipeline is running on main."
-        echo "Wait for it to complete before branching, or you may need to rebase later."
-        # Ask user: wait / continue anyway / abort
+        echo "NOTE: A CI/release pipeline is running on main. Proceeding anyway."
+        echo "You may need to rebase later if new commits land."
+        # Continue automatically -- do NOT ask wait/continue/abort
     fi
 
     # Attempt merge

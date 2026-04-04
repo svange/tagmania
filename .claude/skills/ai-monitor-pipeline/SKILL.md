@@ -6,7 +6,9 @@ argument-hint: "[run-id or branch-name]"
 
 Monitor CI pipeline, diagnose failures, and auto-fix when possible: $ARGUMENTS
 
-Watches the pipeline run, parses failures, attempts auto-fixes for common issues, and re-pushes with user approval.
+> **Workflow automation:** This skill is part of an automated workflow. Auto-push trivial formatting/whitespace fixes without asking. Only ask for approval when fixes involve substantive code changes. Report what was fixed but do not gate on user confirmation for mechanical fixes.
+
+Watches the pipeline run, parses failures, attempts auto-fixes for common issues, and re-pushes automatically for trivial fixes.
 
 ## Usage Examples
 - `/ai-monitor-pipeline` - Monitor latest run on current branch
@@ -135,7 +137,7 @@ Failed jobs:
 - Maximum 2 fix attempts total
 - If same failure type repeats after a fix: stop immediately
 - Never modify the same file more than twice across all attempts
-- Always require user approval before pushing
+- Auto-push trivial fixes (formatting/whitespace); require approval only for substantive changes
 
 **Track state:**
 ```python
@@ -167,12 +169,24 @@ For each auto-fixable failure:
    # Must pass now
    ```
 
-3. **Show the diff and ask for approval:**
+3. **Categorize the fix and decide whether to auto-push:**
+
+   **Trivial fixes (auto-push without asking):** formatting (ruff-format, black, prettier), whitespace (trailing-whitespace, end-of-file-fixer), import sorting (isort, ruff I-rules). These are mechanical and deterministic.
+
    ```
-   Fix attempt #1:
+   Fix attempt #1 (auto-pushed):
    Files modified:
      - src/auth.py (formatting)
      - src/utils.py (trailing whitespace)
+   ```
+
+   For trivial fixes: commit and push immediately. Do NOT show the diff or ask for approval.
+
+   **Substantive fixes (ask before pushing):** any fix that changes logic, adds/removes code beyond whitespace, or modifies behavior. Show the diff and ask:
+   ```
+   Fix attempt #1 (requires approval):
+   Files modified:
+     - src/auth.py (logic change)
 
    Diff:
    [show git diff]
@@ -180,7 +194,7 @@ For each auto-fixable failure:
    Push these fixes? [y/n]
    ```
 
-4. **If approved, commit and push:**
+4. **Commit and push:**
    ```bash
    git add -u
    git commit -m "fix: resolve pre-commit formatting issues"

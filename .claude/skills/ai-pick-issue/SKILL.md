@@ -6,6 +6,8 @@ argument-hint: "[issue-number or search-terms]"
 
 Intelligently find or select GitHub issues: $ARGUMENTS
 
+> **Workflow automation:** This skill is part of an automated workflow. When an issue is selected and the design conversation concludes, proceed directly to branch preparation by invoking `/ai-prepare-branch`. Do NOT prompt "shall I continue?" or "would you like me to run /ai-prepare-branch?" -- just do it.
+
 Smart issue finder that understands numbers, keywords, and natural language.
 
 ## Usage Examples
@@ -195,22 +197,17 @@ Files likely affected: [list]
 Out of scope: [what we're NOT doing]
 ```
 
-Then ask: **"Does this match your intent? Ready to proceed?"**
+Present this summary naturally as part of the conversation. If the user engages with questions or corrections, refine the approach. If the user signals agreement (or does not object), proceed to prepare the branch.
 
-Only after the user explicitly confirms should you suggest `/ai-prepare-branch`.
+Do NOT ask "Ready to proceed?" or wait for explicit confirmation. Treat the design summary as a natural checkpoint -- pause briefly for the user to react, then move forward.
 
-## 7. Final Output
+## 7. Final Output and Automatic Transition
 
 **IMPORTANT**:
 - Only recommend or list OPEN issues
 - If user specifies a closed issue number, show it but warn prominently
 - Never include closed issues in recommendation scoring
 
-To start working on an issue, use:
-```
-/ai-prepare-branch <issue-number>
-```
+**Automatic next step:** After the design conversation concludes (user agrees or does not object to the proposed approach), immediately invoke `/ai-prepare-branch <issue-number>` to create the branch. Do NOT just suggest it -- actually run it. The user expects the workflow to continue automatically.
 
-Examples:
-- `/ai-prepare-branch 123` - Create a branch for issue #123
-- `/ai-prepare-branch fix the auth bug` - Create a branch with description
+If no specific issue was selected (e.g., user was just browsing recommendations), present the recommendations and stop.
