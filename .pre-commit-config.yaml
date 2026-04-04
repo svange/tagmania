@@ -1,57 +1,46 @@
-default_install_hook_types:
-  - pre-commit
-  - commit-msg
-  - pre-push
-
-default_stages:
-  - pre-commit
-  - pre-push
-
 repos:
-  - repo: meta
-    hooks:
-      - id: check-hooks-apply
-      - id: check-useless-excludes
-
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
-      - id: check-vcs-permalinks
-      - id: end-of-file-fixer
-        exclude: "tests/((commands|data)/|test_).+"
-      - id: trailing-whitespace
-        args: [ --markdown-linebreak-ext=md ]
-        exclude: CHANGELOG.md
-      - id: debug-statements
-#      - id: no-commit-to-branch
-      - id: check-merge-conflict
-      - id: check-toml
       - id: check-yaml
-        args: [ '--unsafe' ] # for mkdocs.yml
+        exclude: '(^templates/.*\.yaml$|.*template\.yaml$)'
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
       - id: detect-private-key
 
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+  - repo: local
     hooks:
-      - id: isort
-        name: isort (python)
-        args: ["--profile", "black", "--line-length", "88"]
+      - id: forbid-env-commit
+        name: Block committed .env files
+        entry: python -c "import subprocess, sys; files = subprocess.run(['git', 'ls-files'], capture_output=True, text=True).stdout; sys.exit(1 if any(f.endswith('/.env') or f == '.env' for f in files.splitlines()) else 0)"
+        language: system
+        pass_filenames: false
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.6
-    hooks:
-      - id: ruff
-        args: [ --fix ]
       - id: ruff-format
+        name: Ruff format
+        entry: uv run --no-sync ruff format src/ tests/
+        language: system
+        files: '\.py$'
+        pass_filenames: false
 
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: v3.31.0
-    hooks:
-      - id: commitizen
+      - id: ruff-check
+        name: Ruff check
+        entry: uv run --no-sync ruff check --fix src/ tests/
+        language: system
+        files: '\.py$'
+        pass_filenames: false
 
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.0
-    hooks:
-      - id: bandit
-        args: ['-ll', '-r', 'src/']
-        exclude: tests/
+      - id: mypy
+        name: MyPy type checking
+        entry: uv run --no-sync mypy src/
+        language: system
+        files: '\.py$'
+        pass_filenames: false
+
+      - id: uv-lock-check
+        name: Check uv.lock is up to date
+        entry: uv lock --check
+        language: system
+        files: 'pyproject\.toml$'
+        pass_filenames: false

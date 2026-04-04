@@ -106,9 +106,7 @@ def main():
         default=False,
         help="List snapshots with a given label or all if none specified.",
     )
-    parser.add_argument(
-        "-n", "--name", default=None, help="Name to use for the snapshots."
-    )
+    parser.add_argument("-n", "--name", default=None, help="Name to use for the snapshots.")
     parser.add_argument(
         "-t",
         "--target",
@@ -130,9 +128,7 @@ def main():
 
     if args.backup:
         snapshot_name = "default" if args.name is None else args.name
-        confirm = input(
-            f"Create backup of {args.cluster} named '{snapshot_name}'? [no] "
-        )
+        confirm = input(f"Create backup of {args.cluster} named '{snapshot_name}'? [no] ")
         if confirm == "yes":
             print("Making backup.")
             instances = cluster.get_instances()
@@ -177,9 +173,7 @@ def main():
 
                 # Check if any instances match the pattern
                 instances = cluster.get_instances()
-                filtered_instances = cluster._filter_instances_by_name_regex(
-                    instances, args.target
-                )
+                filtered_instances = cluster._filter_instances_by_name_regex(instances, args.target)
 
                 if len(filtered_instances) == 0:
                     print(
@@ -221,9 +215,7 @@ def main():
                 print("Operation aborted.")
         else:
             # Full cluster restore
-            confirm = input(
-                f"Restore backup of {args.cluster} named '{snapshot_name}'? [no] "
-            )
+            confirm = input(f"Restore backup of {args.cluster} named '{snapshot_name}'? [no] ")
             if confirm == "yes":
                 print("Restoring cluster.")
                 instances = cluster.get_instances()
@@ -251,7 +243,7 @@ def main():
 
             # Getting a dictionary of all snapshots associated with the cluster provided grouped by label
             label_list = []
-            snapshot_dict = {}
+            snapshot_dict: dict[str, list[str]] = {}
             for snapshot in snapshots:
                 for tag in snapshot.tags:
                     if "Label" in tag["Key"] and tag["Value"] not in label_list:

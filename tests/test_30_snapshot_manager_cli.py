@@ -38,6 +38,7 @@ class TestSnapshotManagerCLI:
         assert "--target" in result.stdout
         assert "Regex pattern to match instance Name tags" in result.stdout
 
+    @pytest.mark.integration
     def test_snapshot_manager_targeted_restore_validation(self):
         """Test that snapshot_manager validates regex patterns correctly"""
         # Test with invalid regex - should return error code
@@ -61,6 +62,7 @@ class TestSnapshotManagerCLI:
 
         assert "Invalid regex pattern" in result.stdout
 
+    @pytest.mark.integration
     def test_snapshot_manager_targeted_restore_no_instances(self):
         """Test targeted restore when no instances match pattern"""
         result = subprocess.run(
@@ -139,9 +141,9 @@ class TestSnapshotManagerCLI:
             # Just verify the restore completed successfully without waiting for start
             # (The CLI output already confirms the restore worked)
             stopped_instances = cluster2.get_stopped_instances()
-            assert (
-                len(stopped_instances) >= 1
-            ), "At least one instance should be stopped after restore"
+            assert len(stopped_instances) >= 1, (
+                "At least one instance should be stopped after restore"
+            )
 
         finally:
             # Cleanup: delete test snapshots
@@ -161,6 +163,7 @@ class TestSnapshotManagerCLI:
                 check=False,
             )
 
+    @pytest.mark.integration
     def test_list_snapshots_cli(self):
         """Test listing snapshots via CLI"""
         result = subprocess.run(
@@ -191,10 +194,10 @@ class TestSnapshotManagerCLI:
 
         assert result.returncode != 0
         assert (
-            "not allowed" in result.stderr.lower()
-            or "mutually exclusive" in result.stderr.lower()
+            "not allowed" in result.stderr.lower() or "mutually exclusive" in result.stderr.lower()
         )
 
+    @pytest.mark.integration
     def test_target_only_with_restore(self):
         """Test that --target is only meaningful with --restore"""
         # This should work (restore with target)

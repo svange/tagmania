@@ -3,6 +3,7 @@ import pytest
 from tagmania.iac_tools.clusterset import ClusterSet
 
 
+@pytest.mark.integration
 class TestTargetedRestore:
     """
     Test targeted restore functionality with regex filtering.
@@ -36,9 +37,7 @@ class TestTargetedRestore:
             if tag["Key"] == "Name":
                 instance_name = tag["Value"]
                 break
-        assert (
-            instance_name == "test2-api-01"
-        ), f"Expected test2-api-01, got {instance_name}"
+        assert instance_name == "test2-api-01", f"Expected test2-api-01, got {instance_name}"
 
     def test_filter_instances_by_name_regex_multiple_match(self, cluster2):
         """Test filtering instances with regex that matches multiple instances"""
@@ -86,9 +85,7 @@ class TestTargetedRestore:
             if tag["Key"] == "Name":
                 stopped_name = tag["Value"]
                 break
-        assert (
-            stopped_name == "test2-api-01"
-        ), f"Expected api instance stopped, got {stopped_name}"
+        assert stopped_name == "test2-api-01", f"Expected api instance stopped, got {stopped_name}"
 
     @pytest.mark.slow
     def test_start_instances_targeted_single(self, cluster2):
@@ -113,9 +110,7 @@ class TestTargetedRestore:
             if tag["Key"] == "Name":
                 running_name = tag["Value"]
                 break
-        assert (
-            running_name == "test2-db-01"
-        ), f"Expected db instance running, got {running_name}"
+        assert running_name == "test2-db-01", f"Expected db instance running, got {running_name}"
 
     @pytest.mark.slow
     def test_cross_cluster_isolation(self, cluster1, cluster2):

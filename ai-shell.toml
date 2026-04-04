@@ -1,0 +1,20 @@
+# ai-shell.toml - Project configuration for ai-shell
+# Uncomment and modify the settings you want to override.
+# See: https://github.com/svange/augint-shell
+
+# [container]
+# image = "svange/augint-shell"
+# image_tag = "latest"
+# extra_env = { MY_VAR = "value" }
+# extra_volumes = ["/host/path:/container/path"]
+# ports = [9000, 9229]
+
+# [llm]
+# primary_model = "qwen3.5:27b"
+# fallback_model = "qwen3-coder-next"
+# context_size = 32768
+# ollama_port = 11434
+# webui_port = 3000
+
+# [aider]
+# model = "ollama_chat/qwen3.5:27b"

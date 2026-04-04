@@ -3,6 +3,7 @@ import pytest
 from tagmania.iac_tools.clusterset import ClusterSet
 
 
+@pytest.mark.integration
 class TestBasicClusterOperations:
     """
     Basic cluster operations tests using test1 cluster (1 instance)

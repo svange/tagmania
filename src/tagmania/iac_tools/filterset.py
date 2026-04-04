@@ -25,6 +25,10 @@ Example:
     ```
 """
 
+from typing import Any
+
+FilterDict = dict[str, str | list[str]]
+
 
 class FilterSet:
     """Wrapper class for managing AWS resource filters.
@@ -51,7 +55,7 @@ class FilterSet:
         ```
     """
 
-    def __init__(self, filters=None):
+    def __init__(self, filters: list[FilterDict] | None = None) -> None:
         """Initialize FilterSet with optional existing filters.
 
         Args:
@@ -59,11 +63,11 @@ class FilterSet:
                     If None, creates empty filter set.
         """
         if filters is None:
-            self._filters = []
+            self._filters: list[FilterDict] = []
         else:
             self._filters = filters
 
-    def add(self, name, values):
+    def add(self, name: str, values: str | list[str]) -> None:
         """Add a new filter to the filter set.
 
         Args:
@@ -78,10 +82,10 @@ class FilterSet:
         """
         if isinstance(values, str):
             values = [values]
-        f = {"Name": name, "Values": values}
+        f: FilterDict = {"Name": name, "Values": values}
         self._filters.append(f)
 
-    def get(self, name):
+    def get(self, name: str) -> list[str] | None:
         """Retrieve the values for a specific filter name.
 
         Args:
@@ -99,10 +103,10 @@ class FilterSet:
         """
         for f in self._filters:
             if f["Name"] == name:
-                return f["Values"]
+                return f["Values"]  # type: ignore[return-value]
         return None
 
-    def to_list(self):
+    def to_list(self) -> list[Any]:
         """Convert filter set to AWS-compatible list format.
 
         Returns:

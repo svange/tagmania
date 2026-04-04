@@ -4,7 +4,7 @@
 [![CI Status](https://github.com/svange/tagmania/actions/workflows/pipeline.yaml/badge.svg?branch=main)](https://github.com/svange/tagmania/actions/workflows/pipeline.yaml)
 
 [![PyPI](https://img.shields.io/pypi/v/tagmania?style=flat-square)](https://pypi.org/project/tagmania/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square)](https://github.com/astral-sh/ruff)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?style=flat-square&logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-automated-blue?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/features/actions)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg?style=flat-square)](https://conventionalcommits.org)
@@ -14,28 +14,30 @@
 
 ---
 
-## 📚 Project Resources
+## Project Resources
 
-| [📖 Current Documentation](https://svange.github.io/tagmania) | [🧪 Test Report](https://svange.github.io/tagmania/test-report.html) | [🔒 Security Scan](https://svange.github.io/tagmania/security-reports.html) |
-|:----------------------------------------------------------------:|:------------------------------------------------------------------------:|:------------------------------------------------------------------------------:|
+| Resource | Link |
+|----------|------|
+| API Documentation | [svange.github.io/tagmania](https://svange.github.io/tagmania/) |
+| Test Report | [tests/test-report.html](https://svange.github.io/tagmania/tests/test-report.html) |
+| Coverage Report | [coverage/](https://svange.github.io/tagmania/coverage/) |
+| Security Scan | [security/security-reports.html](https://svange.github.io/tagmania/security/security-reports.html) |
+| License Compliance | [compliance/license-report.html](https://svange.github.io/tagmania/compliance/license-report.html) |
+| PyPI | [pypi.org/project/tagmania](https://pypi.org/project/tagmania/) |
 
 ### Pipeline Artifacts
 
-The CI/CD pipeline generates the following artifacts for each run:
+The CI/CD pipeline generates downloadable artifacts for each run:
 
-| Artifact | Description | When Generated |
-|----------|-------------|----------------|
-| **security-scan-results** | Security analysis reports including:<br>• `bandit-report.json` - Python security issues<br>• `safety-report.json` - Known vulnerabilities in dependencies<br>• `pip-audit-report.json` - Package vulnerability audit<br>• `semgrep-report.json` - Static code analysis<br>• `security-reports.html` - Combined HTML report | Every pipeline run |
-| **test-html** | `test-report.html` - Pytest results with coverage | After test execution |
-| **test-output** | `pytest.log` - Detailed test execution logs | After test execution |
-| **distribution-artifacts** | Python package distribution files in `dist/` | On release to main/dev |
-| **packaged-testing.yaml** | Processed SAM template for test infrastructure | When deploying infrastructure |
+| Artifact | Contents |
+|----------|----------|
+| **security-scan-results** | `bandit-report.json`, `pip-audit-report.json`, `security-reports.html` |
+| **compliance-reports** | `license-report.json`, `license-report.html` |
+| **coverage-reports** | `htmlcov/`, `coverage.xml`, `coverage.json` |
+| **unit-test-reports** | `test-report.html` |
+| **distribution-artifacts** | Built wheel and sdist in `dist/` (on release) |
 
-To download artifacts:
-1. Go to the [Actions tab](https://github.com/svange/tagmania/actions)
-2. Select a workflow run
-3. Scroll to "Artifacts" section at the bottom
-4. Click on any artifact to download
+Download from the [Actions tab](https://github.com/svange/tagmania/actions) > select a run > scroll to "Artifacts".
 
 ---
 
@@ -79,7 +81,7 @@ For testing, consider using AWS Free Tier eligible instance types and remember t
 ## Available Commands
 
 - `cluster-start` - Start all instances in a cluster
-- `cluster-stop` - Stop all instances in a cluster  
+- `cluster-stop` - Stop all instances in a cluster
 - `cluster-snap` - Create, restore, delete, and list snapshots
 
 ## Quick Start

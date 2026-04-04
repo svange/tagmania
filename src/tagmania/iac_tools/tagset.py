@@ -25,6 +25,10 @@ Example:
     ```
 """
 
+from typing import Any
+
+TagDict = dict[str, str]
+
 
 class TagSet:
     """Wrapper class for managing AWS resource tags.
@@ -54,7 +58,7 @@ class TagSet:
         ```
     """
 
-    def __init__(self, tags=None):
+    def __init__(self, tags: list[Any] | None = None) -> None:
         """Initialize TagSet with optional existing tags.
 
         Args:
@@ -62,11 +66,11 @@ class TagSet:
                  If None, creates empty tag set.
         """
         if tags is None:
-            self._tags = []
+            self._tags: list[TagDict] = []
         else:
             self._tags = tags
 
-    def add(self, key, value):
+    def add(self, key: str, value: str) -> None:
         """Add a new tag to the tag set.
 
         Args:
@@ -79,10 +83,10 @@ class TagSet:
             tags.add('Owner', 'team-backend')
             ```
         """
-        tag = {"Key": key, "Value": value}
+        tag: TagDict = {"Key": key, "Value": value}
         self._tags.append(tag)
 
-    def get(self, key):
+    def get(self, key: str) -> str | None:
         """Retrieve the value for a specific tag key.
 
         Args:
@@ -103,7 +107,7 @@ class TagSet:
                 return tag["Value"]
         return None
 
-    def to_list(self):
+    def to_list(self) -> list[Any]:
         """Convert tag set to AWS-compatible list format.
 
         Returns:
