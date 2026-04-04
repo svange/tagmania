@@ -419,7 +419,7 @@ class ClusterSet:
         for i in instances:
             print(f"Un-tagging instance {i.id}")
             instance_ids.append(i.id)
-        self._ec2_client.delete_tags(Resources=instance_ids, Tags=tags)  # type: ignore[arg-type]
+        self._ec2_client.delete_tags(Resources=instance_ids, Tags=tags)
 
     def get_volumes(self) -> list[Any]:
         """
@@ -703,7 +703,7 @@ class ClusterSet:
             volume_ids.append(volume.id)
         # Might as well un-tag on one big batch since volume objects don't
         # have direct support for un-tagging.
-        self._ec2_client.delete_tags(Resources=volume_ids, Tags=tags)  # type: ignore[arg-type]
+        self._ec2_client.delete_tags(Resources=volume_ids, Tags=tags)
 
     def wait_for_volumes(self, volume_ids: list[str], status: str) -> None:
         """
@@ -717,7 +717,7 @@ class ClusterSet:
         """
         # This is a helper method - perhaps it should be static
         self._logger.debug("method_call: wait_for_volumes")
-        waiter = self._ec2_client.get_waiter(status)  # type: ignore[call-overload]
+        waiter = self._ec2_client.get_waiter(status)
         waiter.wait(
             VolumeIds=volume_ids,
             WaiterConfig={
@@ -841,7 +841,7 @@ class ClusterSet:
             snapshot_ids.append(snapshot.id)
         # Might as well un-tag on one big batch since snapshot objects don't
         # have direct support for un-tagging.
-        self._ec2_client.delete_tags(Resources=snapshot_ids, Tags=tags)  # type: ignore[arg-type]
+        self._ec2_client.delete_tags(Resources=snapshot_ids, Tags=tags)
 
     def get_subnet(self) -> Any:
         """
@@ -870,7 +870,7 @@ class ClusterSet:
     def untag_subnet(self, tags: list[dict[str, str]]) -> None:
         subnet = self.get_subnet()
         print(f"Un-tagging subnet {subnet.id}")
-        self._ec2_client.delete_tags(Resources=[subnet.id], Tags=tags)  # type: ignore[arg-type]
+        self._ec2_client.delete_tags(Resources=[subnet.id], Tags=tags)
 
     def _filter_instances_by_name_regex(self, instances: list[Any], name_pattern: str) -> list[Any]:
         """

@@ -3,6 +3,7 @@ import pytest
 from tagmania.iac_tools.clusterset import ClusterSet
 
 
+@pytest.mark.integration
 class TestTargetedRestore:
     """
     Test targeted restore functionality with regex filtering.
