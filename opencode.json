@@ -1,0 +1,52 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "ollama/qwen3.5:27b",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (Local)",
+      "options": {
+        "baseURL": "http://host.docker.internal:11434/v1"
+      },
+      "models": {
+        "qwen3.5:27b": {
+          "name": "Qwen 3.5 27B (Local)"
+        },
+        "qwen3-coder-next": {
+          "name": "Qwen3 Coder Next 80B MoE (Local)"
+        }
+      }
+    },
+    "amazon-bedrock": {
+      "options": {
+        "region": "{env:AWS_REGION}",
+        "profile": "{env:AWS_PROFILE}"
+      },
+      "models": {
+        "anthropic.claude-sonnet-4-20250514-v1:0": {
+          "name": "Claude Sonnet 4 (Bedrock)"
+        },
+        "anthropic.claude-opus-4-20250514-v1:0": {
+          "name": "Claude Opus 4 (Bedrock)"
+        },
+        "anthropic.claude-haiku-4-5-20251001-v1:0": {
+          "name": "Claude Haiku 4.5 (Bedrock)"
+        }
+      }
+    }
+  },
+  "instructions": ["NOTES.md"],
+  "permission": {
+    "read": "allow",
+    "edit": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "bash": "allow",
+    "skill": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "external_directory": "ask",
+    "doom_loop": "ask"
+  }
+}

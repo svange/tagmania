@@ -25,13 +25,20 @@ uv run pytest tests/test_10_cluster_set.py::TestBasicClusterOperations::test_clu
 
 Pre-commit hooks run automatically: ruff format, ruff check (with `--fix`), mypy, uv lock check, and standard checks (trailing whitespace, merge conflicts, private key detection, .env file blocking). Run manually with `make format` or `uv run pre-commit run --all-files`.
 
+Direct commands (without make):
+```bash
+uv run ruff check src/                       # Lint
+uv run mypy src/                             # Type check
+uv run pre-commit run --all-files            # Run all pre-commit hooks
+```
+
 ## Critical Rules
 
-- **No rebase on main**: NEVER use `git pull --rebase` or `git rebase` on `main`. This repo uses CI and rewriting history on main breaks it. Always use merge commits.
+- **No rebase on main**: NEVER use `git pull --rebase` or `git rebase` on the default branch. This repo uses CI and rewriting history on main breaks it. Always use merge commits.
 - **No manual versioning**: NEVER manually edit version numbers. Python Semantic Release owns versioning.
-- **No lock file edits**: NEVER manually edit lock files (uv.lock, package-lock.json, poetry.lock, yarn.lock). They are auto-generated.
+- **No lock file edits**: NEVER directly write text into lock files (uv.lock, package-lock.json, poetry.lock, yarn.lock). Always use package manager commands (`uv lock`, `uv add`, `npm install`) to regenerate them. When a package manager command updates a lock file, ALWAYS stage and include it in the commit -- lock file changes must never be left uncommitted.
 - **No .env commits**: NEVER commit .env files. Use .env.example for templates.
-- **No force push to main**: NEVER use `git push --force` on main.
+- **No force push to main**: NEVER use `git push --force` on main or the default branch.
 
 Version in `pyproject.toml` and `src/tagmania/__init__.py`:
 - Bumped automatically via conventional commits:
@@ -42,6 +49,7 @@ Version in `pyproject.toml` and `src/tagmania/__init__.py`:
 
 ## Conventions
 
+- **Commits**: Conventional commits required. `fix:` = patch, `feat:` = minor, `feat!:` / `BREAKING CHANGE` = major.
 - **Branches**: `{type}/issue-N-description` where type is one of: feat, fix, docs, refactor, test, chore, ci, build, style, revert, perf.
 - **PRs**: Target the default development branch. Enable automerge.
 - **Pre-commit**: Run `uv run pre-commit run --all-files` explicitly before committing (no automatic git hooks -- they break across Windows/WSL). If checks fail, fix the issue and create a NEW commit (do not amend).
@@ -49,12 +57,13 @@ Version in `pyproject.toml` and `src/tagmania/__init__.py`:
 
 ## Development Workflow
 
-1. **Pick an issue**: Find or get assigned an issue to work on
-2. **Create a branch**: `git checkout -b feat/issue-N-description`
+**IMPORTANT**: Always follow this sequence. Do NOT skip to step 3 without completing step 2 first.
+
+1. **Pick an issue**: `/ai-pick-issue` -- find or get assigned work
+2. **Prepare branch**: `/ai-prepare-branch` -- REQUIRED before any code changes. Creates a fresh branch from the latest base (main or dev), syncs upstream, sets up remote tracking. Never start coding on an existing branch from a previous task.
 3. **Develop**: Write code with tests, following project conventions
-4. **Check**: Run `uv run pre-commit run --all-files` and `uv run pytest`
-5. **Submit**: Commit with conventional messages, create PR
-6. **Monitor**: Watch CI pipeline, fix any failures
+4. **Submit**: `/ai-submit-work` -- runs all checks locally, commits, pushes, creates automerge PR
+5. **Monitor**: `/ai-monitor-pipeline` -- watches CI, diagnoses failures, auto-fixes and re-pushes
 
 ## Testing
 
@@ -68,7 +77,23 @@ Markers:
 ```bash
 uv run pytest -m "not slow and not integration"   # Fast tests only
 uv run pytest -m "integration or slow"             # Integration tests
-uv run pytest --cov=src --cov-fail-under=70        # With coverage threshold
+uv run pytest --cov=src --cov-fail-under=80        # With coverage threshold
+```
+
+## Key Commands
+
+```bash
+# Git
+git status                    # Check working tree
+git log --oneline -10         # Recent commits
+
+# GitHub CLI
+gh issue list --state open    # View open issues
+gh pr create                  # Create pull request
+gh pr merge --auto --merge    # Enable automerge
+gh run list                   # List workflow runs
+gh run view <id>              # View run details
+gh run watch <id>             # Watch run in real-time
 ```
 
 ## Architecture

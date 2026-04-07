@@ -365,6 +365,48 @@ jobs:
       - name: Run integration tests
         run: make test-integration
 
+  cleanup-test-infrastructure:
+    name: Cleanup test infrastructure
+    needs: [integration-tests]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
+        with:
+          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          aws-region: ${{ env.TESTING_REGION }}
+          role-session-name: testing-cleanup
+
+      - name: Delete test infrastructure stack
+        continue-on-error: true
+        run: |
+          aws cloudformation delete-stack \
+            --stack-name "${TESTING_STACK_NAME}" \
+            --region "${TESTING_REGION}"
+
+          echo "Delete stack initiated for ${TESTING_STACK_NAME}"
+
+      - name: Wait for stack deletion to complete
+        continue-on-error: true
+        run: |
+          echo "Waiting for stack deletion to complete..."
+          aws cloudformation wait stack-delete-complete \
+            --stack-name "${TESTING_STACK_NAME}" \
+            --region "${TESTING_REGION}" \
+            --waiter-delay 10 \
+            --waiter-attempts 60 || {
+              echo "Stack deletion did not complete within 10 minutes"
+              echo "Please check AWS CloudFormation console and manually delete stack if needed"
+              exit 1
+            }
+
+          echo "Stack ${TESTING_STACK_NAME} successfully deleted"
+
   release:
     name: Semantic release
     needs: [unit-tests, integration-tests, security-scan, compliance-reports]

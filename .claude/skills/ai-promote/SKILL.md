@@ -1,6 +1,6 @@
 ---
 name: ai-promote
-description: Promote staging (dev) to production (main) by creating an automerge PR. Use when dev/staging is ready for release.
+description: Promote staging (dev) to production (main) by creating an automerge PR. Use when dev/staging is ready for release, or saying 'release to production'.
 argument-hint: "[--dry-run]"
 ---
 
@@ -17,10 +17,8 @@ Verifies CI status, checks for un-reviewed commits, and creates a merge PR that 
 ```bash
 git fetch --all --prune
 
-# Detect dev branch (same logic as ai-prepare-branch)
+# Canonical algorithm -- see CLAUDE.md (Architecture > Branch Detection Algorithm)
 DEV_BRANCH=""
-# Check ai-shell.toml [workflow] dev_branch first
-# Then auto-detect: dev > develop > staging
 for candidate in dev develop staging; do
     if git show-ref --verify --quiet refs/remotes/origin/$candidate; then
         DEV_BRANCH=$candidate
@@ -28,7 +26,7 @@ for candidate in dev develop staging; do
     fi
 done
 
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@' 2>/dev/null || echo "main")
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
 
 if [ -z "$DEV_BRANCH" ]; then
     echo "ERROR: This repo doesn't use a staging branch. Nothing to promote."

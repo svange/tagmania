@@ -163,7 +163,10 @@
       "Bash(prettier:*)",
       "Bash(tsc:*)",
       "Bash(jest:*)",
-      "Bash(vitest:*)"
+      "Bash(vitest:*)",
+      "Bash(ai-mono:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git push origin --delete:*)"
     ],
     "deny": [
       "Write(poetry.lock)",
@@ -193,7 +196,16 @@
       "Bash(cat .env:*)",
       "Read(.env)",
       "Read(.env.*)",
-      "Bash(sed -i:*)"
+      "Bash(sed -i:*)",
+      "Write(uv.lock)",
+      "Edit(uv.lock)",
+      "Bash(git push --force origin:*)",
+      "Bash(git push --force -:*)",
+      "Bash(cat .env)",
+      "Bash(cat .env :*)",
+      "Bash(cat .env.local:*)",
+      "Read(.env.local)",
+      "Read(.env.*.local)"
     ]
   },
   "enableAllProjectMcpServers": false,
