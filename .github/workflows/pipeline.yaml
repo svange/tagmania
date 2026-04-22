@@ -293,6 +293,8 @@ jobs:
           path: test-report.html
 
   deploy-test-infrastructure:
+    # Gated on the `approval-required` GitHub Environment. Reviewers and
+    # admin-bypass policy live in repo Settings -> Environments, not here.
     name: Deploy test infrastructure
     runs-on: ubuntu-latest
     needs: [security, compliance, build-validation, unit-tests]
