@@ -1,23 +1,20 @@
 # Tagmania
 
-
 [![CI Status](https://github.com/svange/tagmania/actions/workflows/pipeline.yaml/badge.svg?branch=main)](https://github.com/svange/tagmania/actions/workflows/pipeline.yaml)
-
 [![PyPI](https://img.shields.io/pypi/v/tagmania?style=flat-square)](https://pypi.org/project/tagmania/)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square)](https://github.com/astral-sh/ruff)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?style=flat-square&logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-automated-blue?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/features/actions)
-[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg?style=flat-square)](https://conventionalcommits.org)
 [![semantic-release](https://img.shields.io/badge/%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg?style=flat-square)](https://github.com/semantic-release/semantic-release)
 [![License](https://img.shields.io/github/license/svange/tagmania?style=flat-square)](https://github.com/svange/tagmania/blob/main/LICENSE)
 
+Manic tools for manipulating sets of tagged resources in AWS.
 
 ---
 
-## Project Resources
+## Pipeline Artifacts
 
-| Resource | Link |
-|----------|------|
+> Reports are published to GitHub Pages on every release to `main`.
+
+| Report | Link |
+|--------|------|
 | API Documentation | [svange.github.io/tagmania](https://svange.github.io/tagmania/) |
 | Test Report | [tests/test-report.html](https://svange.github.io/tagmania/tests/test-report.html) |
 | Coverage Report | [coverage/](https://svange.github.io/tagmania/coverage/) |
@@ -25,50 +22,82 @@
 | License Compliance | [compliance/license-report.html](https://svange.github.io/tagmania/compliance/license-report.html) |
 | PyPI | [pypi.org/project/tagmania](https://pypi.org/project/tagmania/) |
 
-### Pipeline Artifacts
-
-The CI/CD pipeline generates downloadable artifacts for each run:
-
-| Artifact | Contents |
-|----------|----------|
-| **security-scan-results** | `bandit-report.json`, `pip-audit-report.json`, `security-reports.html` |
-| **compliance-reports** | `license-report.json`, `license-report.html` |
-| **coverage-reports** | `htmlcov/`, `coverage.xml`, `coverage.json` |
-| **unit-test-reports** | `test-report.html` |
-| **distribution-artifacts** | Built wheel and sdist in `dist/` (on release) |
-
-Download from the [Actions tab](https://github.com/svange/tagmania/actions) > select a run > scroll to "Artifacts".
+Per-run downloadable artifacts (`bandit-report.json`, `pip-audit-report.json`, `coverage.xml`, `test-report.html`, `license-report.json`, built `dist/` on release) are available under the [Actions tab](https://github.com/svange/tagmania/actions) > select a run > scroll to "Artifacts".
 
 ---
 
-## Overview
+## What This Does
 
-Tagmania provides command-line tools for managing AWS EC2 clusters through tag-based operations. It offers utilities for starting, stopping, and creating snapshots of clusters identified by their "Cluster" tag.
+Tagmania is a command-line toolkit for managing groups of AWS EC2 instances that share a `Cluster` tag. You point it at a cluster name and it can start, stop, snapshot, or restore every instance in that cluster as a single unit. It's useful if you run dev/test environments on EC2 and want a simple way to pause them overnight, back them up before risky changes, or roll an entire cluster back to a known-good state.
 
-**Key Requirements:**
-- EC2 instances must have "Cluster" tag to identify cluster membership
-- Instance "Name" tags are used for targeted operations
-- AWS CLI profile configuration required for authentication
+It operates only on resources it's been told to manage (via a `SNAPSHOT_MANAGER` automation tag), so it won't accidentally touch unrelated resources in your account.
 
-## Installation
+---
 
-### Quick Install
+## Getting Started
+
+> This project uses AI-assisted development. You do not need to memorize
+> git commands or CI configuration -- your AI agent handles that.
+
+### Prerequisites
+
+- Python 3.12 or higher
+- An AWS account with EC2 access
+- An AWS CLI profile configured (e.g. via `aws configure`)
+- EC2 instances tagged with a `Cluster` tag identifying their membership
+- IAM permissions for the `ec2:*` actions listed in the [template IAM policy](template.yaml) (read + start/stop + snapshot/volume lifecycle)
+
+### First-time setup
 
 ```bash
 pip install tagmania
+# or, with uv
+uv tool install tagmania
 ```
 
-### Version Management
-
-For production environments, always pin to a specific version:
+For production, pin to an exact version:
 
 ```bash
-pip install tagmania==2.4.0
+pip install tagmania==2.6.1
 ```
 
-See [Version Management](#version-management-and-stability) for detailed guidance on version pinning and stability.
+### Running locally
 
-### AWS Cost Warning
+```bash
+cluster-start  my-cluster                 # boot all instances in my-cluster
+cluster-stop   my-cluster                 # stop all instances in my-cluster
+cluster-snap --backup  my-cluster         # snapshot every attached EBS volume
+cluster-snap --restore my-cluster         # restore volumes from most recent snapshot
+cluster-snap --list    my-cluster         # list snapshots for the cluster
+```
+
+All commands accept `--profile <aws-profile>` for credential selection. See [Available Commands](#available-commands) and [Advanced Features](#advanced-features) below for more.
+
+---
+
+## How to Contribute
+
+> Contributions are made through AI agents (Claude Code, Copilot, etc.).
+> You describe what you want changed in plain language; the agent handles
+> branching, coding, testing, and submitting a pull request.
+
+1. **Open Claude Code** (or your AI agent) in this repo.
+2. **Describe the change** you want -- a bug fix, a new feature, a doc update.
+3. The agent will:
+   - Create a feature branch
+   - Make the changes
+   - Run pre-commit checks and tests
+   - Open a pull request
+4. **Review the PR** when the agent is done. CI runs automatically.
+5. **Merge** once CI is green.
+
+If you need to work manually, see the full [contributor guide](CONTRIBUTING.md).
+
+---
+
+<!-- Custom sections preserved from previous README -->
+
+## AWS Cost Warning
 
 **⚠️ Important**: This tool operates on AWS infrastructure and can incur costs:
 - EBS snapshot storage charges apply for all created snapshots
@@ -193,30 +222,30 @@ To ensure consistent and stable deployments, it is critical to pin Tagmania to s
 
 **pip with version pinning:**
 ```bash
-pip install tagmania==2.4.0
+pip install tagmania==2.6.1
 ```
 
 **Poetry (recommended for projects):**
 ```toml
 [tool.poetry.dependencies]
-tagmania = "2.4.0"
+tagmania = "2.6.1"
 ```
 
 **Requirements.txt:**
 ```
-tagmania==2.4.0
+tagmania==2.6.1
 ```
 
 ### Version Selection Strategy
 
 **Production Environments:**
-- Always use exact version pinning (e.g., `==2.4.0`)
+- Always use exact version pinning (e.g., `==2.6.1`)
 - Test new versions in development/staging before production deployment
 - Document version upgrade procedures and rollback plans
 - Monitor release notes for breaking changes
 
 **Development Environments:**
-- Use compatible version ranges for feature development (e.g., `~=2.4.0`)
+- Use compatible version ranges for feature development (e.g., `~=2.6.1`)
 - Pin to exact versions when reproducing production issues
 - Update regularly to stay current with security patches
 
@@ -239,24 +268,14 @@ print(tagmania.__version__)
 pip freeze > requirements-backup.txt
 
 # Upgrade to specific version
-pip install tagmania==2.5.0
+pip install tagmania==2.6.1
 
 # Test functionality
 cluster-snap --list test-cluster
 
 # If issues occur, rollback
-pip install tagmania==2.4.0
+pip install tagmania==2.5.0
 ```
-
-## Contributing
-
-We welcome contributions! Tagmania uses a fork-based development model to ensure code quality and maintain project integrity.
-
-Please see our [Contributing Guide](CONTRIBUTING.md) for detailed instructions on:
-- Setting up your development environment
-- Creating and maintaining your fork
-- Submitting pull requests
-- Following our coding standards and commit conventions
 
 ## Troubleshooting
 
@@ -264,13 +283,13 @@ Please see our [Contributing Guide](CONTRIBUTING.md) for detailed instructions o
 - **Invalid regex**: Test regex patterns before using with targeted operations
 - **Permission errors**: Ensure AWS profile has EC2 and EBS permissions
 - **Timeout issues**: Large volumes may take time to snapshot/restore
-- **Python compatibility**: Requires Python 3.9 or higher
+- **Python compatibility**: Requires Python 3.12 or higher
 
 ## Support
 
-- 📖 [Documentation](https://svange.github.io/tagmania)
-- 🐛 [Issue Tracker](https://github.com/svange/tagmania/issues)
-- 💬 [Discussions](https://github.com/svange/tagmania/discussions)
+- [Documentation](https://svange.github.io/tagmania)
+- [Issue Tracker](https://github.com/svange/tagmania/issues)
+- [Discussions](https://github.com/svange/tagmania/discussions)
 
 ## License
 
