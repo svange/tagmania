@@ -42,9 +42,22 @@ Warning:
 """
 
 import argparse
+import logging
 import re
 
 from tagmania.iac_tools.clusterset import ClusterSet
+from tagmania.iac_tools.timing import log_duration
+
+
+def _configure_logging() -> logging.Logger:
+    """Attach a stderr handler to the tagmania logger so INFO lines show up in the CLI."""
+    logger = logging.getLogger("tagmania")
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return logger
 
 
 def main():
@@ -124,6 +137,7 @@ def main():
     parser.add_argument("--profile", "-p", help="the AWS profile to use", default=None)
     args = parser.parse_args()
 
+    logger = _configure_logging()
     cluster = ClusterSet(args.cluster, profile=args.profile)
 
     if args.backup:
@@ -135,11 +149,12 @@ def main():
             if len(instances) == 0:
                 print("No instances found. Operation aborted.")
             else:
-                # Stop the cluster (not clean)
-                cluster.stop_instances()
-                cluster.create_snapshots(snapshot_name)
-                # Start cluster
-                # cluster.start_instances()
+                with log_duration(logger, "backup"):
+                    # Stop the cluster (not clean)
+                    cluster.stop_instances()
+                    cluster.create_snapshots(snapshot_name)
+                    # Start cluster
+                    # cluster.start_instances()
                 print("Operation completed successfully!")
         else:
             print("Operation aborted.")
@@ -197,16 +212,17 @@ def main():
                     )
                     if confirm == "yes":
                         print("Restoring targeted instances.")
-                        # Stop targeted instances
-                        cluster.stop_instances_targeted(args.target)
-                        # Detach and delete volumes from targeted instances
-                        cluster.detach_volumes_targeted(args.target)
-                        cluster.delete_volumes_targeted(args.target)
-                        # Create new volumes from snapshots and attach them
-                        cluster.create_volumes_targeted(snapshot_name, args.target)
-                        cluster.attach_volumes_targeted(snapshot_name, args.target)
-                        # Start targeted instances
-                        # cluster.start_instances_targeted(args.target)
+                        with log_duration(logger, "restore_targeted"):
+                            # Stop targeted instances
+                            cluster.stop_instances_targeted(args.target)
+                            # Detach and delete volumes from targeted instances
+                            cluster.detach_volumes_targeted(args.target)
+                            cluster.delete_volumes_targeted(args.target)
+                            # Create new volumes from snapshots and attach them
+                            cluster.create_volumes_targeted(snapshot_name, args.target)
+                            cluster.attach_volumes_targeted(snapshot_name, args.target)
+                            # Start targeted instances
+                            # cluster.start_instances_targeted(args.target)
                         print("Operation completed successfully!")
                     else:
                         print("Operation aborted.")
@@ -222,16 +238,17 @@ def main():
                 if len(instances) == 0:
                     print("No instances found. Operation aborted.")
                 else:
-                    # Stop cluster (not clean)
-                    cluster.stop_instances()
-                    # Detach and delete current volumes
-                    cluster.detach_volumes()
-                    cluster.delete_volumes()
-                    # Create new volumes from snapshots and attach them
-                    cluster.create_volumes(snapshot_name)
-                    cluster.attach_volumes(snapshot_name)
-                    # Start cluster
-                    # cluster.start_instances()
+                    with log_duration(logger, "restore"):
+                        # Stop cluster (not clean)
+                        cluster.stop_instances()
+                        # Detach and delete current volumes
+                        cluster.detach_volumes()
+                        cluster.delete_volumes()
+                        # Create new volumes from snapshots and attach them
+                        cluster.create_volumes(snapshot_name)
+                        cluster.attach_volumes(snapshot_name)
+                        # Start cluster
+                        # cluster.start_instances()
                     print("Operation completed successfully!")
             else:
                 print("Operation aborted.")
