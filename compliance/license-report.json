@@ -12,7 +12,7 @@
   {
     "License": "BSD-3-Clause",
     "Name": "GitPython",
-    "Version": "3.1.46"
+    "Version": "3.1.47"
   },
   {
     "License": "BSD License",
@@ -23,6 +23,21 @@
     "License": "BSD-3-Clause",
     "Name": "MarkupSafe",
     "Version": "3.0.3"
+  },
+  {
+    "License": "GNU Library or Lesser General Public License (LGPL)",
+    "Name": "PyGithub",
+    "Version": "2.9.1"
+  },
+  {
+    "License": "MIT",
+    "Name": "PyJWT",
+    "Version": "2.12.1"
+  },
+  {
+    "License": "Apache Software License",
+    "Name": "PyNaCl",
+    "Version": "1.6.2"
   },
   {
     "License": "MIT License",
@@ -40,9 +55,19 @@
     "Version": "0.7.0"
   },
   {
+    "License": "MIT",
+    "Name": "augint-github",
+    "Version": "2.0.0"
+  },
+  {
     "License": "UNKNOWN",
     "Name": "augint-shell",
-    "Version": "0.33.0"
+    "Version": "0.89.1"
+  },
+  {
+    "License": "UNKNOWN",
+    "Name": "augint-tools",
+    "Version": "5.29.1"
   },
   {
     "License": "Apache-2.0",
@@ -57,17 +82,17 @@
   {
     "License": "Apache-2.0",
     "Name": "boto3",
-    "Version": "1.42.84"
+    "Version": "1.42.93"
   },
   {
     "License": "MIT",
     "Name": "boto3-stubs",
-    "Version": "1.42.84"
+    "Version": "1.42.93"
   },
   {
     "License": "Apache-2.0",
     "Name": "botocore",
-    "Version": "1.42.84"
+    "Version": "1.42.93"
   },
   {
     "License": "MIT",
@@ -78,6 +103,11 @@
     "License": "Mozilla Public License 2.0 (MPL 2.0)",
     "Name": "certifi",
     "Version": "2026.2.25"
+  },
+  {
+    "License": "MIT",
+    "Name": "cffi",
+    "Version": "2.0.0"
   },
   {
     "License": "MIT",
@@ -103,6 +133,11 @@
     "License": "Apache-2.0",
     "Name": "coverage",
     "Version": "7.13.5"
+  },
+  {
+    "License": "Apache-2.0 OR BSD-3-Clause",
+    "Name": "cryptography",
+    "Version": "46.0.7"
   },
   {
     "License": "Apache Software License",
@@ -132,7 +167,7 @@
   {
     "License": "MIT",
     "Name": "filelock",
-    "Version": "3.25.2"
+    "Version": "3.29.0"
   },
   {
     "License": "BSD License",
@@ -142,12 +177,12 @@
   {
     "License": "MIT",
     "Name": "identify",
-    "Version": "2.6.18"
+    "Version": "2.6.19"
   },
   {
     "License": "BSD-3-Clause",
     "Name": "idna",
-    "Version": "3.11"
+    "Version": "3.12"
   },
   {
     "License": "Apache Software License",
@@ -165,14 +200,24 @@
     "Version": "1.1.0"
   },
   {
-    "License": "MIT License",
+    "License": "MIT",
     "Name": "librt",
-    "Version": "0.8.1"
+    "Version": "0.9.0"
   },
   {
     "License": "Apache-2.0",
     "Name": "license-expression",
     "Version": "30.4.4"
+  },
+  {
+    "License": "MIT License",
+    "Name": "linkify-it-py",
+    "Version": "2.1.0"
+  },
+  {
+    "License": "MIT License",
+    "Name": "loguru",
+    "Version": "0.7.3"
   },
   {
     "License": "MIT License",
@@ -183,6 +228,11 @@
     "License": "MIT",
     "Name": "markdown2",
     "Version": "2.5.5"
+  },
+  {
+    "License": "MIT License",
+    "Name": "mdit-py-plugins",
+    "Version": "0.5.0"
   },
   {
     "License": "MIT License",
@@ -197,17 +247,17 @@
   {
     "License": "MIT",
     "Name": "mypy",
-    "Version": "1.20.0"
+    "Version": "1.20.2"
   },
   {
     "License": "MIT",
     "Name": "mypy-boto3-ec2",
-    "Version": "1.42.80"
+    "Version": "1.42.92"
   },
   {
     "License": "MIT",
     "Name": "mypy-boto3-s3",
-    "Version": "1.42.80"
+    "Version": "1.42.85"
   },
   {
     "License": "MIT",
@@ -227,7 +277,7 @@
   {
     "License": "Apache-2.0 OR BSD-2-Clause",
     "Name": "packaging",
-    "Version": "26.0"
+    "Version": "26.1"
   },
   {
     "License": "Mozilla Public License 2.0 (MPL 2.0)",
@@ -257,7 +307,7 @@
   {
     "License": "MIT",
     "Name": "platformdirs",
-    "Version": "4.9.4"
+    "Version": "4.9.6"
   },
   {
     "License": "MIT License",
@@ -267,7 +317,7 @@
   {
     "License": "MIT",
     "Name": "pre_commit",
-    "Version": "4.5.1"
+    "Version": "4.6.0"
   },
   {
     "License": "Apache Software License",
@@ -275,14 +325,19 @@
     "Version": "2.1.0"
   },
   {
+    "License": "BSD-3-Clause",
+    "Name": "pycparser",
+    "Version": "3.0"
+  },
+  {
     "License": "MIT",
     "Name": "pydantic",
-    "Version": "2.12.5"
+    "Version": "2.13.3"
   },
   {
     "License": "MIT",
     "Name": "pydantic_core",
-    "Version": "2.41.5"
+    "Version": "2.46.3"
   },
   {
     "License": "MIT",
@@ -292,7 +347,7 @@
   {
     "License": "MIT",
     "Name": "pytest",
-    "Version": "9.0.2"
+    "Version": "9.0.3"
   },
   {
     "License": "MIT License",
@@ -322,7 +377,7 @@
   {
     "License": "MIT License",
     "Name": "python-discovery",
-    "Version": "1.2.1"
+    "Version": "1.2.2"
   },
   {
     "License": "BSD-3-Clause",
@@ -352,12 +407,12 @@
   {
     "License": "MIT License",
     "Name": "rich",
-    "Version": "14.3.3"
+    "Version": "14.3.4"
   },
   {
     "License": "MIT",
     "Name": "ruff",
-    "Version": "0.15.9"
+    "Version": "0.15.11"
   },
   {
     "License": "Apache Software License",
@@ -392,7 +447,12 @@
   {
     "License": "MIT License\n\n Copyright (c) 2025 Augmenting Integrations LLC\n\n Permission is hereby granted, free of charge, to any person obtaining a copy\n of this software and associated documentation files (the \"Software\"), to deal\n in the Software without restriction, including without limitation the rights\n to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n copies of the Software, and to permit persons to whom the Software is\n furnished to do so, subject to the following conditions:\n\n The above copyright notice and this permission notice shall be included in all\n copies or substantial portions of the Software.\n\n THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n SOFTWARE.",
     "Name": "tagmania",
-    "Version": "2.6.0"
+    "Version": "2.6.1"
+  },
+  {
+    "License": "MIT License",
+    "Name": "textual",
+    "Version": "1.0.0"
   },
   {
     "License": "MIT",
@@ -430,6 +490,11 @@
     "Version": "4.15.0"
   },
   {
+    "License": "MIT License",
+    "Name": "uc-micro-py",
+    "Version": "2.0.0"
+  },
+  {
     "License": "MIT",
     "Name": "urllib3",
     "Version": "2.6.3"
@@ -437,7 +502,7 @@
   {
     "License": "MIT",
     "Name": "virtualenv",
-    "Version": "21.2.0"
+    "Version": "21.2.4"
   },
   {
     "License": "BSD-2-Clause",
