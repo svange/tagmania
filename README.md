@@ -41,11 +41,10 @@ It operates only on resources it's been told to manage (via a `SNAPSHOT_MANAGER`
 
 ### Prerequisites
 
-- Python 3.12 or higher
-- An AWS account with EC2 access
-- An AWS CLI profile configured (e.g. via `aws configure`)
-- EC2 instances tagged with a `Cluster` tag identifying their membership
-- IAM permissions for the `ec2:*` actions listed in the [template IAM policy](template.yaml) (read + start/stop + snapshot/volume lifecycle)
+- **Python 3.12 or higher** (`python --version`)
+- **AWS CLI profile** configured via `aws configure` or `~/.aws/credentials`
+- **EC2 instances tagged** with a `Cluster` tag identifying their membership
+- **IAM permissions** -- see [Minimum IAM Policy](#minimum-iam-policy) below
 
 ### First-time setup
 
@@ -71,7 +70,78 @@ cluster-snap --restore my-cluster         # restore volumes from most recent sna
 cluster-snap --list    my-cluster         # list snapshots for the cluster
 ```
 
-All commands accept `--profile <aws-profile>` for credential selection. See [Available Commands](#available-commands) and [Advanced Features](#advanced-features) below for more.
+All commands accept `--profile <aws-profile>` for credential selection. See [Available Commands](#available-commands) and [Advanced Features](#advanced-features) below for more. Additional end-to-end walkthroughs live in [EXAMPLES.md](EXAMPLES.md).
+
+### Minimum IAM Policy
+
+The AWS identity running Tagmania needs the following permissions. Replace `my-cluster` with your actual `Cluster` tag value (or use a wildcard list if you manage multiple clusters).
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EC2Read",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeImages",
+        "ec2:DescribeAvailabilityZones"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "InstanceStartStop",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:StartInstances",
+        "ec2:StopInstances"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "ec2:ResourceTag/Cluster": ["my-cluster"] }
+      }
+    },
+    {
+      "Sid": "VolumeLifecycleTagged",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DeleteVolume",
+        "ec2:AttachVolume",
+        "ec2:DetachVolume",
+        "ec2:CreateTags",
+        "ec2:DeleteTags"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "ec2:ResourceTag/Cluster": ["my-cluster"] }
+      }
+    },
+    {
+      "Sid": "VolumeCreate",
+      "Effect": "Allow",
+      "Action": ["ec2:CreateVolume"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SnapshotLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateSnapshot",
+        "ec2:DeleteSnapshot",
+        "ec2:CreateTags"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+The tagged conditions restrict the blast radius of start/stop and volume-modifying calls to instances that carry the matching `Cluster` tag. `CreateVolume` and snapshot create/delete are not tag-conditioned because AWS doesn't support that tag condition during resource creation.
+
+The `template.yaml` in this repo uses the same policy shape for integration-test infrastructure.
 
 ---
 
@@ -92,6 +162,34 @@ All commands accept `--profile <aws-profile>` for credential selection. See [Ava
 5. **Merge** once CI is green.
 
 If you need to work manually, see the full [contributor guide](CONTRIBUTING.md).
+
+---
+
+## Architecture
+
+Tagmania is a thin layer on top of `boto3`. Every CLI entry point instantiates a `ClusterSet`, which owns an EC2 resource + client and exposes tag-scoped operations on instances, volumes, and snapshots.
+
+```mermaid
+flowchart LR
+    CLI["CLI entry points<br/>cluster-start / cluster-stop / cluster-snap"]
+    CS["ClusterSet<br/>(src/tagmania/iac_tools/clusterset.py)"]
+    subgraph boto3[boto3]
+      EC2R["EC2 resource"]
+      EC2C["EC2 client"]
+    end
+    TS["TagSet<br/>[{Key, Value}, ...]"]
+    FS["FilterSet<br/>[{Name, Values}, ...]"]
+
+    CLI --> CS
+    CS --> EC2R
+    CS --> EC2C
+    CS --> TS
+    CS --> FS
+```
+
+- **ClusterSet** is the only class that issues AWS API calls. It enforces a `_MAX_ITEMS = 150` safety cap and only touches resources tagged with its `AUTOMATION_KEY = "SNAPSHOT_MANAGER"`.
+- **TagSet** and **FilterSet** are tiny wrappers around the two shapes of list-of-dicts that AWS uses (`[{Key, Value}]` for tags, `[{Name, Values}]` for filters).
+- **Snapshot / volume lifecycles** run sequentially inside `ClusterSet.create_snapshots` and `create_volumes`. Targeted variants (`*_targeted`) filter by regex against the instance `Name` tag for partial cluster operations.
 
 ---
 
@@ -279,11 +377,12 @@ pip install tagmania==2.5.0
 
 ## Troubleshooting
 
-- **No instances found**: Verify "Cluster" tag exists and matches exactly
-- **Invalid regex**: Test regex patterns before using with targeted operations
-- **Permission errors**: Ensure AWS profile has EC2 and EBS permissions
-- **Timeout issues**: Large volumes may take time to snapshot/restore
-- **Python compatibility**: Requires Python 3.12 or higher
+- **`No instances found`**: The `Cluster` tag doesn't match any running or stopped instance. Tags are case-sensitive; verify with `aws ec2 describe-instances --filters Name=tag:Cluster,Values=my-cluster`.
+- **`UnauthorizedOperation` / `AccessDenied`**: The AWS identity is missing one of the required permissions. See the [Minimum IAM Policy](#minimum-iam-policy) -- most permission errors come from the conditioned `ec2:StartInstances` / `ec2:StopInstances` / volume actions when the caller's `Cluster` tag restriction doesn't include the cluster you're operating on.
+- **`Invalid regex pattern`**: Targeted restore (`--target`) validates its regex before running. Test patterns with a quick `--list` or `python -c "import re; re.compile('...')"` before passing to `--restore`.
+- **Snapshot completes but restore hangs**: Large EBS volumes (>1TB) can exceed the default 60-minute waiter timeout. The waiter polls every 5s for up to 720 attempts; watch the log for the `create_snapshots took Xs` timing line to gauge duration.
+- **`InvalidSnapshot.NotFound`**: The snapshot label doesn't exist for this cluster. List labels with `cluster-snap --list my-cluster`.
+- **Python compatibility**: Requires Python 3.12 or higher (see `pyproject.toml`).
 
 ## Support
 
