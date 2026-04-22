@@ -293,8 +293,6 @@ jobs:
           path: test-report.html
 
   deploy-test-infrastructure:
-    # Gated on the `approval-required` GitHub Environment. Reviewers and
-    # admin-bypass policy live in repo Settings -> Environments, not here.
     name: Deploy test infrastructure
     runs-on: ubuntu-latest
     needs: [security, compliance, build-validation, unit-tests]
@@ -307,12 +305,10 @@ jobs:
     concurrency:
       group: testing-stack-${{ github.repository }}
       cancel-in-progress: false
-    # Maintainer bypass of the approval-required environment is disabled so
-    # we can exercise the environment approval flow end-to-end. To restore
-    # the bypass (repo owner / MAINTAINERS list skip the manual approval
-    # gate; push events run unattended), replace the line below with:
-    #   environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
-    environment: approval-required
+    # Gate deploy on the `approval-required` environment for outside-contributor
+    # PRs only; repo owner and MAINTAINERS bypass, push events run unattended.
+    # Reviewers and admin-bypass policy live in repo Settings -> Environments.
+    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
     permissions:
       id-token: write
       contents: read
@@ -405,15 +401,9 @@ jobs:
 
       - name: Run acceptance tests with coverage
         run: |
-          # TEMPORARY: acceptance tests disabled while iterating on the
-          # pipeline itself (env approval gating, stack cleanup, etc.).
-          # The full 15-minute AWS test suite is not under test here.
-          # To re-enable, uncomment the pytest invocation below and
-          # delete this echo:
-          # uv run pytest -v \
-          #   --cov=src --cov-report=html --cov-report=xml --cov-report=json \
-          #   --html=test-report.html --self-contained-html
-          echo "Acceptance tests skipped -- pipeline iteration mode (see comment above to restore)"
+          uv run pytest -v \
+            --cov=src --cov-report=html --cov-report=xml --cov-report=json \
+            --html=test-report.html --self-contained-html
 
       - name: Upload coverage reports
         if: always()
