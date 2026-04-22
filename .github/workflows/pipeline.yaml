@@ -305,7 +305,12 @@ jobs:
     concurrency:
       group: testing-stack-${{ github.repository }}
       cancel-in-progress: false
-    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
+    # Maintainer bypass of the approval-required environment is disabled so
+    # we can exercise the environment approval flow end-to-end. To restore
+    # the bypass (repo owner / MAINTAINERS list skip the manual approval
+    # gate; push events run unattended), replace the line below with:
+    #   environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
+    environment: approval-required
     permissions:
       id-token: write
       contents: read
@@ -366,7 +371,12 @@ jobs:
     concurrency:
       group: testing-stack-${{ github.repository }}
       cancel-in-progress: false
-    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
+    # Maintainer bypass of the approval-required environment is disabled so
+    # we can exercise the environment approval flow end-to-end. To restore
+    # the bypass (repo owner / MAINTAINERS list skip the manual approval
+    # gate; push events run unattended), replace the line below with:
+    #   environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
+    environment: approval-required
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -430,7 +440,12 @@ jobs:
     concurrency:
       group: testing-stack-${{ github.repository }}
       cancel-in-progress: false
-    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
+    # Maintainer bypass of the approval-required environment is disabled so
+    # we can exercise the environment approval flow end-to-end. To restore
+    # the bypass (repo owner / MAINTAINERS list skip the manual approval
+    # gate; push events run unattended), replace the line below with:
+    #   environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
+    environment: approval-required
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -445,7 +460,6 @@ jobs:
           role-session-name: testing-cleanup
 
       - name: Delete test infrastructure stack
-        continue-on-error: true
         run: |
           aws cloudformation delete-stack \
             --stack-name "${TESTING_STACK_NAME}" \
@@ -454,18 +468,13 @@ jobs:
           echo "Delete stack initiated for ${TESTING_STACK_NAME}"
 
       - name: Wait for stack deletion to complete
-        continue-on-error: true
         run: |
           echo "Waiting for stack deletion to complete..."
           aws cloudformation wait stack-delete-complete \
             --stack-name "${TESTING_STACK_NAME}" \
             --region "${TESTING_REGION}" \
-            --waiter-delay 10 \
-            --waiter-attempts 60 || {
-              echo "Stack deletion did not complete within 10 minutes"
-              echo "Please check AWS CloudFormation console and manually delete stack if needed"
-              exit 1
-            }
+            --waiter-delay 30 \
+            --waiter-attempts 120
 
           echo "Stack ${TESTING_STACK_NAME} successfully deleted"
 
