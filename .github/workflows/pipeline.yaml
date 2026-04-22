@@ -371,12 +371,6 @@ jobs:
     concurrency:
       group: testing-stack-${{ github.repository }}
       cancel-in-progress: false
-    # Maintainer bypass of the approval-required environment is disabled so
-    # we can exercise the environment approval flow end-to-end. To restore
-    # the bypass (repo owner / MAINTAINERS list skip the manual approval
-    # gate; push events run unattended), replace the line below with:
-    #   environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
-    environment: approval-required
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -440,12 +434,6 @@ jobs:
     concurrency:
       group: testing-stack-${{ github.repository }}
       cancel-in-progress: false
-    # Maintainer bypass of the approval-required environment is disabled so
-    # we can exercise the environment approval flow end-to-end. To restore
-    # the bypass (repo owner / MAINTAINERS list skip the manual approval
-    # gate; push events run unattended), replace the line below with:
-    #   environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
-    environment: approval-required
     runs-on: ubuntu-latest
     permissions:
       id-token: write
