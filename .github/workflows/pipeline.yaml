@@ -283,18 +283,7 @@ jobs:
       - name: Run unit tests
         run: |
           uv run pytest -m "fast or (not slow and not integration)" \
-            --cov=src --cov-report=html --cov-report=xml --cov-report=json --cov-fail-under=50 \
             --html=test-report.html --self-contained-html
-
-      - name: Upload coverage reports
-        if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: coverage-reports
-          path: |
-            htmlcov/
-            coverage.xml
-            coverage.json
 
       - name: Upload test report
         if: always()
@@ -306,11 +295,17 @@ jobs:
   deploy-test-infrastructure:
     name: Deploy test infrastructure
     runs-on: ubuntu-latest
-    needs: [security]
+    needs: [security, compliance, build-validation, unit-tests]
     if: |
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') &&
-      vars.TESTING_PIPELINE_EXECUTION_ROLE != ''
+      vars.TESTING_PIPELINE_EXECUTION_ROLE != '' &&
+      (
+        (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) ||
+        (github.event_name == 'pull_request' && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository)
+      )
+    concurrency:
+      group: testing-stack-${{ github.repository }}
+      cancel-in-progress: false
+    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
     permissions:
       id-token: write
       contents: read
@@ -359,10 +354,19 @@ jobs:
             --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE} \
             --parameter-overrides PipelineExecutionRoleName=${PIPELINE_ROLE_NAME}
 
-  integration-tests:
-    name: Integration tests
-    needs: [deploy-test-infrastructure, unit-tests]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+  acceptance-tests:
+    name: Acceptance tests
+    needs: [deploy-test-infrastructure]
+    if: |
+      vars.TESTING_PIPELINE_EXECUTION_ROLE != '' &&
+      (
+        (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) ||
+        (github.event_name == 'pull_request' && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository)
+      )
+    concurrency:
+      group: testing-stack-${{ github.repository }}
+      cancel-in-progress: false
+    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -393,13 +397,40 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Run integration tests
-        run: make test-integration
+      - name: Run acceptance tests with coverage
+        run: |
+          uv run pytest -v \
+            --cov=src --cov-report=html --cov-report=xml --cov-report=json \
+            --html=test-report.html --self-contained-html
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: coverage-reports
+          path: |
+            htmlcov/
+            coverage.xml
+            coverage.json
+
+      - name: Upload acceptance test report
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: acceptance-test-reports
+          path: test-report.html
 
   cleanup-test-infrastructure:
     name: Cleanup test infrastructure
-    needs: [integration-tests]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    needs: [deploy-test-infrastructure, acceptance-tests]
+    if: |
+      always() &&
+      needs.deploy-test-infrastructure.result != 'skipped' &&
+      vars.TESTING_PIPELINE_EXECUTION_ROLE != ''
+    concurrency:
+      group: testing-stack-${{ github.repository }}
+      cancel-in-progress: false
+    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -440,7 +471,7 @@ jobs:
 
   release:
     name: Semantic release
-    needs: [unit-tests, integration-tests, security, compliance, build-validation]
+    needs: [unit-tests, acceptance-tests, security, compliance, build-validation]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
     runs-on: ubuntu-latest
     concurrency:

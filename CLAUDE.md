@@ -75,10 +75,12 @@ Markers:
 - `fast` - quick tests
 
 ```bash
-uv run pytest -m "not slow and not integration"   # Fast tests only
-uv run pytest -m "integration or slow"             # Integration tests
-uv run pytest --cov=src --cov-fail-under=80        # With coverage threshold
+uv run pytest -m "not slow and not integration"   # Fast tests only (no coverage)
+uv run pytest -m "integration or slow"             # Integration tests (requires AWS)
+uv run pytest --cov=src                            # Full suite with coverage (threshold from pyproject.toml)
 ```
+
+Coverage threshold lives in `pyproject.toml` under `[tool.coverage.report] fail_under`. `coverage.py` enforces it automatically whenever `--cov` is passed to pytest. Never pass `--cov-fail-under` on the CLI or in CI -- pyproject.toml is the single source of truth.
 
 ## Key Commands
 
@@ -122,6 +124,34 @@ Full restore: stop instances -> detach volumes -> delete volumes -> create volum
 
 ## CI/CD Pipeline
 
-GitHub Actions pipeline (`.github/workflows/pipeline.yaml`):
-- PR: pre-commit checks + unit tests + security scan + license compliance
-- Push to main/dev: adds integration tests (with AWS infra deploy) + semantic release + PyPI publish (main -> PyPI, dev -> TestPyPI) + docs to GitHub Pages
+GitHub Actions pipeline (`.github/workflows/pipeline.yaml`) gates by canonical stage names:
+
+### Pre-deploy gates (run on both PR and push, no AWS required)
+
+- `Code quality` -- pre-commit hooks, ruff, mypy
+- `Security` -- bandit, pip-audit, semgrep
+- `Compliance` -- license scans
+- `Build validation` -- sdist/wheel build
+- `Unit tests` -- fast regression check (`pytest -m "fast or (not slow and not integration)"`); no coverage enforcement at this stage
+
+### Post-deploy gates (AWS-dependent; gated on `approval-required` environment for PRs)
+
+- `Deploy test infrastructure` -- transient CFN stack providing the `test1` cluster fixture
+- `Acceptance tests` -- full suite with `pytest --cov=src`; `[tool.coverage.report] fail_under = 80` in pyproject.toml enforces the threshold
+- `Cleanup test infrastructure` -- deletes the CFN stack (always runs, including on test failure)
+
+"Deploy" here means **ephemeral test fixture**, not production artifact. The real deploy is the PyPI publish at the end of the pipeline.
+
+### Flow by trigger
+
+- **Draft PR**: pre-deploy gates only. AWS jobs skipped (`if: !github.event.pull_request.draft`).
+- **Ready-for-review PR**: pre-deploy gates run automatically. AWS jobs queue on the `approval-required` environment -- a maintainer clicks "Approve and deploy" to run the acceptance flow. Required status check `Acceptance tests` must pass for merge.
+- **Push to main/dev** (post-merge): all gates run unattended. Release and publish gated on acceptance.
+
+### Concurrency
+
+AWS-touching jobs share `concurrency.group: testing-stack-${{ github.repository }}` to prevent parallel PRs from colliding on the shared test stack. Runs serialize through that group.
+
+### Required status checks (ruleset)
+
+`Code quality`, `Security`, `Unit tests`, `Compliance`, `Build validation`, `Acceptance tests`.

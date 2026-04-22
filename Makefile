@@ -11,8 +11,8 @@ install: ## Install dependencies
 test: ## Run all tests
 	uv run pytest -v
 
-test-unit: ## Run unit tests only
-	uv run pytest -m "fast or (not slow and not integration)" --cov=src --cov-report=html --cov-report=xml
+test-unit: ## Run unit tests only (fast regression gate, no coverage)
+	uv run pytest -m "fast or (not slow and not integration)"
 
 test-integration: test-integration-check ## Run integration tests in parallel by cluster (requires AWS credentials)
 	@echo "=== Running cluster1, cluster2, and cluster3 tests in parallel ==="
@@ -34,8 +34,8 @@ test-integration-check: ## Verify all integration tests have a cluster marker
 	@uv run pytest --collect-only -q -m "(integration or slow) and not (cluster1 or cluster2 or cluster3 or cluster_all)" 2>/dev/null; \
 	if [ $$? -ne 5 ]; then echo "ERROR: Found integration tests without a cluster marker!" && exit 1; fi
 
-test-coverage: ## Run tests with coverage report
-	uv run pytest --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-fail-under=70
+test-coverage: ## Run full suite with coverage (threshold sourced from pyproject.toml)
+	uv run pytest --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml
 
 test-fast: ## Run fast tests (exclude slow/integration)
 	uv run pytest -m "fast or (not slow and not integration)" -v
