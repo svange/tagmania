@@ -53,6 +53,7 @@ import boto3
 
 from .filterset import FilterSet
 from .tagset import TagSet
+from .timing import log_duration
 
 
 class ClusterSet:
@@ -564,51 +565,52 @@ class ClusterSet:
             none
         """
         self._logger.debug("method_call: create_managed_volumes")
-        snapshots = self.get_snapshots(label)
-        # Check if snapshot list is empty (e.g. due to an invalid label)
-        if len(snapshots) == 0:
-            print(f"Error: No snapshots found with label '{label}'.")
-        # Create volumes
-        volume_ids = []
-        for snapshot in snapshots:
-            # Determine snapshot's associated instance and device. This is
-            # needed later on so that we know where to attach it.
-            ts = TagSet(snapshot.tags)
-            device = ts.get("Device")
-            instance = ts.get("Instance")
-            if not device:
-                raise Exception(
-                    f"Error: create_volume: Can't find device tag for snapshot {snapshot.id}."
+        with log_duration(self._logger, "create_volumes"):
+            snapshots = self.get_snapshots(label)
+            # Check if snapshot list is empty (e.g. due to an invalid label)
+            if len(snapshots) == 0:
+                print(f"Error: No snapshots found with label '{label}'.")
+            # Create volumes
+            volume_ids = []
+            for snapshot in snapshots:
+                # Determine snapshot's associated instance and device. This is
+                # needed later on so that we know where to attach it.
+                ts = TagSet(snapshot.tags)
+                device = ts.get("Device")
+                instance = ts.get("Instance")
+                if not device:
+                    raise Exception(
+                        f"Error: create_volume: Can't find device tag for snapshot {snapshot.id}."
+                    )
+                if not instance:
+                    raise Exception(
+                        f"Error: create_volume: Can't find instance tag for snapshot {snapshot.id}."
+                    )
+                # Determine availability zone from one of the cluster instances
+                avail_zone = self.get_instances()[0].placement["AvailabilityZone"]
+                # Make tags
+                ts = TagSet()
+                ts.add("Cluster", self._cluster_name_str)
+                ts.add("Device", device)
+                ts.add("Instance", instance)
+                ts.add("Label", label)
+                ts.add("Name", f"{instance} - {device}")
+                ts.add("automation_key", self.AUTOMATION_KEY)
+                tags = ts.to_list()
+                # Create volume
+                print(f"Creating volume from snapshot {snapshot.id}")
+                volume = self._ec2.create_volume(
+                    SnapshotId=snapshot.id,
+                    AvailabilityZone=avail_zone,
+                    VolumeInitializationRate=300,
+                    TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],
                 )
-            if not instance:
-                raise Exception(
-                    f"Error: create_volume: Can't find instance tag for snapshot {snapshot.id}."
-                )
-            # Determine availability zone from one of the cluster instances
-            avail_zone = self.get_instances()[0].placement["AvailabilityZone"]
-            # Make tags
-            ts = TagSet()
-            ts.add("Cluster", self._cluster_name_str)
-            ts.add("Device", device)
-            ts.add("Instance", instance)
-            ts.add("Label", label)
-            ts.add("Name", f"{instance} - {device}")
-            ts.add("automation_key", self.AUTOMATION_KEY)
-            tags = ts.to_list()
-            # Create volume
-            print(f"Creating volume from snapshot {snapshot.id}")
-            volume = self._ec2.create_volume(
-                SnapshotId=snapshot.id,
-                AvailabilityZone=avail_zone,
-                VolumeInitializationRate=300,
-                TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],
-            )
-            volume_ids.append(volume.id)
-        # Wait for the volumes to be created
-        if len(volume_ids) > 0:
-            print(f"Waiting for {len(volume_ids)} volumes to be created...")
-            self.wait_for_volumes(volume_ids, "volume_available")
-            self._wait_for_volume_tags(volume_ids)
+                volume_ids.append(volume.id)
+            # Wait for the volumes to be created
+            if len(volume_ids) > 0:
+                print(f"Waiting for {len(volume_ids)} volumes to be created...")
+                self.wait_for_volumes(volume_ids, "volume_available")
+                self._wait_for_volume_tags(volume_ids)
 
     def delete_volumes(self) -> None:
         """
@@ -620,24 +622,25 @@ class ClusterSet:
             none
         """
         self._logger.debug("method_call: delete_volumes")
-        # We really only have to delete the previously detached volumes, but
-        # this will delete all managed volumes in the cluster. Its probably a
-        # good idea to do so as a matter of good housekeeping. Also, if there
-        # are any stale volumes hanging around with the same label that we are
-        # about to restore from that would cause problems because we wouldn't
-        # know which volumes to attach.
-        volumes = self.get_volumes()
-        if len(volumes) == 0:
-            print("No volumes to delete.")
-        else:
-            volume_ids = []
-            for volume in volumes:
-                print(f"Deleting volume {volume.id}")
-                volume.delete()
-                volume_ids.append(volume.id)
-            # Wait for the volumes to be deleted
-            print(f"Waiting for {len(volume_ids)} volumes to be deleted...")
-            self.wait_for_volumes(volume_ids, "volume_deleted")
+        with log_duration(self._logger, "delete_volumes"):
+            # We really only have to delete the previously detached volumes, but
+            # this will delete all managed volumes in the cluster. Its probably a
+            # good idea to do so as a matter of good housekeeping. Also, if there
+            # are any stale volumes hanging around with the same label that we are
+            # about to restore from that would cause problems because we wouldn't
+            # know which volumes to attach.
+            volumes = self.get_volumes()
+            if len(volumes) == 0:
+                print("No volumes to delete.")
+            else:
+                volume_ids = []
+                for volume in volumes:
+                    print(f"Deleting volume {volume.id}")
+                    volume.delete()
+                    volume_ids.append(volume.id)
+                # Wait for the volumes to be deleted
+                print(f"Waiting for {len(volume_ids)} volumes to be deleted...")
+                self.wait_for_volumes(volume_ids, "volume_deleted")
 
     def delete_kubernetes_volumes(self) -> None:
         """
@@ -780,53 +783,54 @@ class ClusterSet:
             none
         """
         self._logger.debug("method_call: create_snapshots")
-        # Check if any snapshots with the same label already exists. If so,
-        # delete them. Only one set of snapshots with a given label may
-        # exist at a time.
-        old_snapshots = self.get_snapshots(label)
-        if len(old_snapshots) > 0:
-            self.delete_snapshots(label)
-        snapshot_ids = []
-        # Get list of instances that need snapshots taken
-        instances = self.get_instances()
-        for i in instances:
-            instance_name = TagSet(i.tags).get("Name") or ""
-            # Get collection of volumes for the current instance
-            volumes = i.volumes.all()
-            for volume in volumes:
-                device = volume.attachments[0]["Device"]
-                # Make description
-                timestamp = datetime.datetime.now(tz=datetime.UTC)
-                date = timestamp.strftime("%Y-%m-%d")
-                time = timestamp.strftime("%H:%M:%S")
-                description = f"Managed snapshot taken on {date} at {time}"
-                # Make tags
-                ts = TagSet()
-                ts.add("Cluster", self._cluster_name_str)
-                ts.add("Device", device)
-                ts.add("Instance", instance_name)
-                ts.add("Label", label)
-                ts.add("Name", f"{instance_name} - {device}")
-                ts.add("automation_key", self.AUTOMATION_KEY)
-                tags = ts.to_list()
-                # Create shapshot
-                shortname = instance_name.split(".")[0]
-                print(f"Creating snapshot of {device} ({volume.id}) on {shortname} ({i.id})")
-                snapshot = volume.create_snapshot(
-                    Description=description,
-                    TagSpecifications=[{"ResourceType": "snapshot", "Tags": tags}],
-                )
-                snapshot_ids.append(snapshot.id)
-        # Wait for snapshots to complete
-        print(f"Waiting for {len(snapshot_ids)} snapshots to complete...")
-        waiter = self._ec2_client.get_waiter("snapshot_completed")
-        waiter.wait(
-            SnapshotIds=snapshot_ids,
-            WaiterConfig={
-                "Delay": 5,
-                "MaxAttempts": 720,
-            },
-        )
+        with log_duration(self._logger, "create_snapshots"):
+            # Check if any snapshots with the same label already exists. If so,
+            # delete them. Only one set of snapshots with a given label may
+            # exist at a time.
+            old_snapshots = self.get_snapshots(label)
+            if len(old_snapshots) > 0:
+                self.delete_snapshots(label)
+            snapshot_ids = []
+            # Get list of instances that need snapshots taken
+            instances = self.get_instances()
+            for i in instances:
+                instance_name = TagSet(i.tags).get("Name") or ""
+                # Get collection of volumes for the current instance
+                volumes = i.volumes.all()
+                for volume in volumes:
+                    device = volume.attachments[0]["Device"]
+                    # Make description
+                    timestamp = datetime.datetime.now(tz=datetime.UTC)
+                    date = timestamp.strftime("%Y-%m-%d")
+                    timestr = timestamp.strftime("%H:%M:%S")
+                    description = f"Managed snapshot taken on {date} at {timestr}"
+                    # Make tags
+                    ts = TagSet()
+                    ts.add("Cluster", self._cluster_name_str)
+                    ts.add("Device", device)
+                    ts.add("Instance", instance_name)
+                    ts.add("Label", label)
+                    ts.add("Name", f"{instance_name} - {device}")
+                    ts.add("automation_key", self.AUTOMATION_KEY)
+                    tags = ts.to_list()
+                    # Create shapshot
+                    shortname = instance_name.split(".")[0]
+                    print(f"Creating snapshot of {device} ({volume.id}) on {shortname} ({i.id})")
+                    snapshot = volume.create_snapshot(
+                        Description=description,
+                        TagSpecifications=[{"ResourceType": "snapshot", "Tags": tags}],
+                    )
+                    snapshot_ids.append(snapshot.id)
+            # Wait for snapshots to complete
+            print(f"Waiting for {len(snapshot_ids)} snapshots to complete...")
+            waiter = self._ec2_client.get_waiter("snapshot_completed")
+            waiter.wait(
+                SnapshotIds=snapshot_ids,
+                WaiterConfig={
+                    "Delay": 5,
+                    "MaxAttempts": 720,
+                },
+            )
 
     def delete_snapshots(self, label: str) -> None:
         """
@@ -838,15 +842,16 @@ class ClusterSet:
             none
         """
         self._logger.debug("method_call: delete_snapshots")
-        snapshots = self.get_snapshots(label)
-        # Delete each snapshot
-        print(f"Deleting {len(snapshots)} snapshots...")
-        for snapshot in snapshots:
-            print(f"Deleting snapshot {snapshot.id}")
-            snapshot.delete()
-        # There is no waiter for snapshot deletion. Add a small delay to guard
-        # against any possible timing issues.
-        time.sleep(2)
+        with log_duration(self._logger, "delete_snapshots"):
+            snapshots = self.get_snapshots(label)
+            # Delete each snapshot
+            print(f"Deleting {len(snapshots)} snapshots...")
+            for snapshot in snapshots:
+                print(f"Deleting snapshot {snapshot.id}")
+                snapshot.delete()
+            # There is no waiter for snapshot deletion. Add a small delay to guard
+            # against any possible timing issues.
+            time.sleep(2)
 
     def tag_snapshots(self, tags: list[dict[str, str]]) -> None:
         snapshots = self.get_snapshots()
@@ -1062,74 +1067,74 @@ class ClusterSet:
             none
         """
         self._logger.debug("method_call: create_volumes_targeted")
+        with log_duration(self._logger, "create_volumes_targeted"):
+            # Validate regex pattern first
+            try:
+                pattern = re.compile(name_pattern)
+            except re.error as e:
+                raise ValueError(f"Invalid regex pattern '{name_pattern}': {e}") from e
 
-        # Validate regex pattern first
-        try:
-            pattern = re.compile(name_pattern)
-        except re.error as e:
-            raise ValueError(f"Invalid regex pattern '{name_pattern}': {e}") from e
+            snapshots = self.get_snapshots(label)
 
-        snapshots = self.get_snapshots(label)
+            # Check if snapshot list is empty
+            if len(snapshots) == 0:
+                print(f"Error: No snapshots found with label '{label}'.")
+                return
 
-        # Check if snapshot list is empty
-        if len(snapshots) == 0:
-            print(f"Error: No snapshots found with label '{label}'.")
-            return
+            # Filter snapshots by instance name pattern
+            targeted_snapshots = []
 
-        # Filter snapshots by instance name pattern
-        targeted_snapshots = []
+            for snapshot in snapshots:
+                ts = TagSet(snapshot.tags)
+                instance = ts.get("Instance")
+                if instance and pattern.search(instance):
+                    targeted_snapshots.append(snapshot)
 
-        for snapshot in snapshots:
-            ts = TagSet(snapshot.tags)
-            instance = ts.get("Instance")
-            if instance and pattern.search(instance):
-                targeted_snapshots.append(snapshot)
+            if len(targeted_snapshots) == 0:
+                print(f"No snapshots found for instances matching pattern '{name_pattern}'.")
+                return
 
-        if len(targeted_snapshots) == 0:
-            print(f"No snapshots found for instances matching pattern '{name_pattern}'.")
-            return
+            # Create volumes
+            volume_ids = []
+            for snapshot in targeted_snapshots:
+                ts = TagSet(snapshot.tags)
+                device = ts.get("Device")
+                instance = ts.get("Instance")
+                if not device:
+                    raise Exception(
+                        f"Error: create_volume: Can't find device tag for snapshot {snapshot.id}."
+                    )
+                if not instance:
+                    raise Exception(
+                        f"Error: create_volume: Can't find instance tag for snapshot {snapshot.id}."
+                    )
 
-        # Create volumes
-        volume_ids = []
-        for snapshot in targeted_snapshots:
-            ts = TagSet(snapshot.tags)
-            device = ts.get("Device")
-            instance = ts.get("Instance")
-            if not device:
-                raise Exception(
-                    f"Error: create_volume: Can't find device tag for snapshot {snapshot.id}."
+                # Determine availability zone from one of the cluster instances
+                avail_zone = self.get_instances()[0].placement["AvailabilityZone"]
+                # Make tags
+                ts = TagSet()
+                ts.add("Cluster", self._cluster_name_str)
+                ts.add("Device", device)
+                ts.add("Instance", instance)
+                ts.add("Label", label)
+                ts.add("Name", f"{instance} - {device}")
+                ts.add("automation_key", self.AUTOMATION_KEY)
+                tags = ts.to_list()
+                # Create volume
+                print(f"Creating volume from snapshot {snapshot.id} for {instance}")
+                volume = self._ec2.create_volume(
+                    SnapshotId=snapshot.id,
+                    AvailabilityZone=avail_zone,
+                    VolumeInitializationRate=300,
+                    TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],
                 )
-            if not instance:
-                raise Exception(
-                    f"Error: create_volume: Can't find instance tag for snapshot {snapshot.id}."
-                )
+                volume_ids.append(volume.id)
 
-            # Determine availability zone from one of the cluster instances
-            avail_zone = self.get_instances()[0].placement["AvailabilityZone"]
-            # Make tags
-            ts = TagSet()
-            ts.add("Cluster", self._cluster_name_str)
-            ts.add("Device", device)
-            ts.add("Instance", instance)
-            ts.add("Label", label)
-            ts.add("Name", f"{instance} - {device}")
-            ts.add("automation_key", self.AUTOMATION_KEY)
-            tags = ts.to_list()
-            # Create volume
-            print(f"Creating volume from snapshot {snapshot.id} for {instance}")
-            volume = self._ec2.create_volume(
-                SnapshotId=snapshot.id,
-                AvailabilityZone=avail_zone,
-                VolumeInitializationRate=300,
-                TagSpecifications=[{"ResourceType": "volume", "Tags": tags}],
-            )
-            volume_ids.append(volume.id)
-
-        # Wait for the volumes to be created
-        if len(volume_ids) > 0:
-            print(f"Waiting for {len(volume_ids)} volumes to be created...")
-            self.wait_for_volumes(volume_ids, "volume_available")
-            self._wait_for_volume_tags(volume_ids)
+            # Wait for the volumes to be created
+            if len(volume_ids) > 0:
+                print(f"Waiting for {len(volume_ids)} volumes to be created...")
+                self.wait_for_volumes(volume_ids, "volume_available")
+                self._wait_for_volume_tags(volume_ids)
 
     def attach_volumes_targeted(self, label: str, name_pattern: str) -> None:
         """
