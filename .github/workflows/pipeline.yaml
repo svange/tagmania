@@ -221,6 +221,7 @@ jobs:
             license-report.json
             license-report.html
 
+
   unit-tests:
     name: Unit tests
     needs: [pre-commit]

@@ -150,5 +150,7 @@ upload_to_vcs_release = false
 
 [dependency-groups]
 dev = [
+    "augint-github>=1.10.0",
     "augint-shell>=0.16.9",
+    "augint-tools>=4.3.0",
 ]
