@@ -33,6 +33,7 @@ jobs:
   code-quality:
     name: Code quality
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft != true
     permissions:
       contents: read
 
@@ -52,7 +53,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Run pre-commit hooks
         run: uv run pre-commit run --all-files
@@ -61,6 +62,7 @@ jobs:
     name: Security
     runs-on: ubuntu-latest
     needs: [code-quality]
+    if: github.event.pull_request.draft != true
     permissions:
       contents: read
       security-events: write
@@ -81,26 +83,36 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Run Bandit security scan
         run: |
           uv run bandit -r src/ -f json -o bandit-report.json || true
           uv run bandit -r src/ -ll
-        continue-on-error: false
 
       - name: Run pip-audit
         run: |
           uv export --no-dev --no-hashes -o prod-requirements.txt
           uv run pip-audit --desc --format json --output pip-audit-report.json \
             -r prod-requirements.txt --no-deps
-        continue-on-error: false
 
       - name: Run Semgrep scan
-        uses: semgrep/semgrep-action@713efdd345f3035192eaa63f56867b88e63e4e5d # v1
-        with:
-          config: auto
-        continue-on-error: true
+        run: |
+          uv run --with semgrep semgrep ci \
+            --config p/python \
+            --config p/security-audit \
+            --config p/secrets \
+            --config p/owasp-top-ten \
+            --error
+
+      - name: IaC policy (checkov)
+        if: hashFiles('template.yaml', 'template.yml', 'cdk.out/**', 'infrastructure/**/*.yaml', 'infrastructure/**/*.yml') != ''
+        run: |
+          uv run --with checkov checkov \
+            --quiet \
+            --download-external-modules false \
+            --framework cloudformation,serverless,cdk \
+            --directory .
 
       - name: Generate security HTML report
         if: always()
@@ -164,6 +176,7 @@ jobs:
     name: Compliance
     runs-on: ubuntu-latest
     needs: [code-quality]
+    if: github.event.pull_request.draft != true
     permissions:
       contents: read
 
@@ -183,34 +196,13 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Generate license reports
         run: |
-          uv export --no-hashes --no-dev > runtime-requirements.txt
           uv run pip-licenses --from=mixed --format=json --output-file=license-report.json
           uv run pip-licenses --from=mixed --format=html --output-file=license-report.html
-          uv run pip-licenses --from=mixed --summary
-
-      - name: Check license compatibility
-        run: |
-          python -c "
-          import json
-          with open('license-report.json', 'r') as f:
-              deps = json.load(f)
-          incompatible = []
-          for dep in deps:
-              license = dep.get('License', '')
-              if any(gpl in license.upper() for gpl in ['GPL', 'AGPL'] if 'LGPL' not in license.upper()):
-                  incompatible.append(f\"{dep['Name']}: {license}\")
-          if incompatible:
-              print('Incompatible licenses found:')
-              for item in incompatible:
-                  print(f'  - {item}')
-              exit(1)
-          else:
-              print('All licenses compatible')
-          "
+          uv run pip-licenses --from=mixed --fail-on 'GPL;AGPL;LGPL' --summary
 
       - name: Upload compliance reports
         if: always()
@@ -225,6 +217,7 @@ jobs:
     name: Build validation
     runs-on: ubuntu-latest
     needs: [code-quality]
+    if: github.event.pull_request.draft != true
     permissions:
       contents: read
 
@@ -256,6 +249,7 @@ jobs:
     name: Unit tests
     needs: [code-quality]
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft != true
     permissions:
       contents: read
 
@@ -275,7 +269,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Run type checking
         run: uv run mypy src/
@@ -397,7 +391,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Run acceptance tests with coverage
         run: |
@@ -502,7 +496,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Verify upstream has not changed
         run: |
@@ -610,7 +604,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Generate documentation
         run: |

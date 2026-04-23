@@ -1,9 +1,26 @@
-# === Environment Variables ===
+# === Secrets and Credentials ===
 .env
 .env.*
 !.env.example
+.env.local
+.env.*.local
 *.env
 !*.env.example
+*.pem
+*.key
+*.crt
+*.cer
+!*.example.pem
+!*.example.key
+
+# === Claude Code / AI Tool History ===
+.claude/settings.local.json
+.claude/plans/
+**/.claude/worktrees/
+.aider.chat.history.md
+.aider.input.history
+.aider/
+.serena
 
 # === Python ===
 __pycache__/
@@ -32,25 +49,92 @@ htmlcov/
 dmypy.json
 .pyre/
 .ruff_cache/
+*.log
 .ipynb_checkpoints/
 
+# === Node.js ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.yarn/integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+.next/
+.nuxt/
+.cache/
+
+# === Vite / Vue ===
+dist-ssr/
+*.local
+*.tsbuildinfo
+.vite/
+.vitepress/dist/
+.vitepress/cache/
+vite.log
+
+# === Next.js ===
+out/
+.turbo/
+.vercel/
+.swc/
+
+# === Storybook ===
+storybook-static/
+
 # === AWS SAM ===
-.aws-sam/
 samconfig.toml
-.sam/
+samconfig.toml.local
+packaged.yaml
+packaged.yml
+packaged-testing.yaml
+layers/dependencies/python/
+layers/*/python/
+.sam-build/
+
+# === AWS and IaC ===
+.aws-sam/
+cdk.out/
+.terraform/
+*.tfstate
+*.tfstate.*
+!*.tfstate.example
+.terraform.lock.hcl
+.serverless/
 
 # === Testing ===
+coverage/
+.nyc_output/
 .hypothesis/
 test-results/
 test-results.json
 junit.xml
 *.lcov
+logs/
+playwright-report/
+blob-report/
+.playwright/
 test-report.html
 pytest.log
+
+# === Security / Compliance Reports ===
+bandit-report.json
+safety-report.json
+pip-audit-report.json
+semgrep.sarif
+license-report.json
+runtime-requirements.txt
 
 # === IDE ===
 .idea/
 .vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
 *.sublime-*
 *.iml
 .project
@@ -68,46 +152,20 @@ Thumbs.db
 *~
 .*.sw?
 
-# === Logs ===
-logs/
-*.log
-
 # === Temporary Files ===
 *.tmp
 *.temp
 *.bak
 *.backup
 *.old
-.cache/
 tmp/
 temp/
 
-# === Certificates ===
-*.pem
-*.key
-*.crt
-*.cer
-!*.example.pem
-!*.example.key
-
-# === License Reports (generated) ===
-license-report.json
-runtime-requirements.txt
-
 # === Generated Docs ===
 docs/
-
-# === SAM Pipeline ===
-packaged-testing.yaml
-
-# === Claude Code ===
-.claude/settings.local.json
-.claude/plans/
 
 # === Generated Reports ===
 report.html
 
 # === Reference repos ===
 ai-lls-lib/
-
-.serena
