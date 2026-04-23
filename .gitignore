@@ -15,12 +15,10 @@
 
 # === Claude Code / AI Tool History ===
 .claude/settings.local.json
-.claude/plans/
 **/.claude/worktrees/
 .aider.chat.history.md
 .aider.input.history
 .aider/
-.serena
 
 # === Python ===
 __pycache__/
@@ -88,11 +86,9 @@ out/
 storybook-static/
 
 # === AWS SAM ===
-samconfig.toml
 samconfig.toml.local
 packaged.yaml
 packaged.yml
-packaged-testing.yaml
 layers/dependencies/python/
 layers/*/python/
 .sam-build/
@@ -119,8 +115,6 @@ logs/
 playwright-report/
 blob-report/
 .playwright/
-test-report.html
-pytest.log
 
 # === Security / Compliance Reports ===
 bandit-report.json
@@ -161,11 +155,24 @@ Thumbs.db
 tmp/
 temp/
 
-# === Generated Docs ===
+# === Custom (preserved from previous version) ===
+
+# AI tool artifacts
+.claude/plans/
+.serena
+
+# AWS SAM (repo-specific)
+samconfig.toml
+
+# Test artifacts
+test-report.html
+pytest.log
+
+# Generated docs (pdoc output)
 docs/
 
-# === Generated Reports ===
+# Generated reports
 report.html
 
-# === Reference repos ===
+# Reference repos (sibling checkout)
 ai-lls-lib/

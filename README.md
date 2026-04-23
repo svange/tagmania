@@ -1,6 +1,6 @@
 # Tagmania
 
-[![CI Status](https://github.com/svange/tagmania/actions/workflows/pipeline.yaml/badge.svg?branch=main)](https://github.com/svange/tagmania/actions/workflows/pipeline.yaml)
+[![CI Status](https://github.com/svange/tagmania/actions/workflows/publish.yaml/badge.svg?branch=main)](https://github.com/svange/tagmania/actions/workflows/publish.yaml)
 [![PyPI](https://img.shields.io/pypi/v/tagmania?style=flat-square)](https://pypi.org/project/tagmania/)
 [![semantic-release](https://img.shields.io/badge/%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg?style=flat-square)](https://github.com/semantic-release/semantic-release)
 [![License](https://img.shields.io/github/license/svange/tagmania?style=flat-square)](https://github.com/svange/tagmania/blob/main/LICENSE)
@@ -17,8 +17,7 @@ Manic tools for manipulating sets of tagged resources in AWS.
 |--------|------|
 | API Documentation | [svange.github.io/tagmania](https://svange.github.io/tagmania/) |
 | Test Report | [tests/test-report.html](https://svange.github.io/tagmania/tests/test-report.html) |
-| Coverage Report | [coverage/](https://svange.github.io/tagmania/coverage/) |
-| Security Scan | [security/security-reports.html](https://svange.github.io/tagmania/security/security-reports.html) |
+| Coverage Report | [coverage/htmlcov/](https://svange.github.io/tagmania/coverage/htmlcov/) |
 | License Compliance | [compliance/license-report.html](https://svange.github.io/tagmania/compliance/license-report.html) |
 | PyPI | [pypi.org/project/tagmania](https://pypi.org/project/tagmania/) |
 

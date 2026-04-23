@@ -4,12 +4,10 @@ on:
   pull_request:
     branches:
       - main
-      - dev
     types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - main
-      - dev
 
 env:
   TESTING_REGION: ${{ vars.TESTING_REGION }}
@@ -26,8 +24,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   code-quality:
@@ -85,10 +83,10 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen --all-extras
 
-      - name: Run Bandit security scan
-        run: |
-          uv run bandit -r src/ -f json -o bandit-report.json || true
-          uv run bandit -r src/ -ll
+      - name: Bandit
+        # Single invocation: -ll enforces medium+ severity (exit code),
+        # -f json -o writes the artifact for the upload step below.
+        run: uv run bandit -r src/ -ll -f json -o bandit-report.json
 
       - name: Run pip-audit
         run: |
@@ -113,67 +111,18 @@ jobs:
           uv run checkov \
             --quiet \
             --download-external-modules false \
-            --framework cloudformation,serverless \
+            --framework cloudformation,serverless,cdk \
             --skip-check CKV_AWS_23,CKV_AWS_111 \
             --directory .
 
-      - name: Generate security HTML report
-        if: always()
-        run: |
-          cat > security-reports.html << 'EOF'
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Security Scan Results</title>
-              <style>
-                  body { font-family: Arial, sans-serif; margin: 20px; background: #0d1117; color: #c9d1d9; }
-                  .report { margin: 20px 0; padding: 15px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; }
-                  .report h2 { color: #58a6ff; margin-top: 0; }
-                  pre { background: #0d1117; padding: 10px; border-radius: 4px; overflow-x: auto; border: 1px solid #30363d; font-size: 12px; }
-                  .error { color: #ff7b72; }
-                  .warning { color: #ffa657; }
-                  .info { color: #79c0ff; }
-              </style>
-          </head>
-          <body>
-              <h1>Security Scan Results</h1>
-              <div class="report">
-                  <h2>Bandit Security Scan</h2>
-                  <pre id="bandit-content"></pre>
-              </div>
-              <div class="report">
-                  <h2>Pip-Audit Results</h2>
-                  <pre id="audit-content"></pre>
-              </div>
-              <script>
-                  const reports = [
-                      {id: 'bandit-content', file: 'bandit-report.json'},
-                      {id: 'audit-content', file: 'pip-audit-report.json'}
-                  ];
-                  reports.forEach(report => {
-                      fetch(report.file)
-                          .then(response => response.json())
-                          .then(data => {
-                              document.getElementById(report.id).textContent = JSON.stringify(data, null, 2);
-                          })
-                          .catch(error => {
-                              document.getElementById(report.id).textContent = 'Report not available';
-                          });
-                  });
-              </script>
-          </body>
-          </html>
-          EOF
-
-      - name: Upload security scan results
+      - name: Upload security reports
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: security-scan-results
+          name: security-reports
           path: |
             bandit-report.json
             pip-audit-report.json
-            security-reports.html
 
   compliance:
     name: Compliance
@@ -296,7 +245,7 @@ jobs:
     if: |
       vars.TESTING_PIPELINE_EXECUTION_ROLE != '' &&
       (
-        (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name == 'pull_request' && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository)
       )
     concurrency:
@@ -360,7 +309,7 @@ jobs:
     if: |
       vars.TESTING_PIPELINE_EXECUTION_ROLE != '' &&
       (
-        (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name == 'pull_request' && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository)
       )
     concurrency:
@@ -466,7 +415,7 @@ jobs:
   release:
     name: Semantic release
     needs: [unit-tests, acceptance-tests, security, compliance, build-validation]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-release-${{ github.ref_name }}
@@ -621,10 +570,10 @@ jobs:
           path: docs/coverage
         continue-on-error: true
 
-      - name: Download security scan results
+      - name: Download security reports
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: security-scan-results
+          name: security-reports
           path: docs/security
         continue-on-error: true
 
