@@ -66,7 +66,7 @@ def main():
 
     cluster = ClusterSet(args.cluster, profile=args.profile)
     cluster.start_instances()
-    print(f"Cluster {cluster.cluster_names} started!")
+    print(f"Cluster {cluster.cluster_names} started successfully.")
 
 
 if __name__ == "__main__":

@@ -70,7 +70,7 @@ def main():
 
     cluster = ClusterSet(args.cluster, profile=args.profile)
     cluster.stop_instances()
-    print(f"Cluster {cluster.cluster_names} stopped!")
+    print(f"Cluster {cluster.cluster_names} stopped successfully.")
 
 
 if __name__ == "__main__":
