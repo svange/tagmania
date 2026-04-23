@@ -1,0 +1,30 @@
+# .github/.ai-compliance.yaml
+# =============================================================================
+# Per-repo overrides for the org-wide compliance engine.
+#
+# The engine lives in augint-tools (TUI dashboard) and evaluates the rules in
+# ai-cc-tools' canonical standards.yaml against this repo on every dashboard
+# refresh. By default every rule applies -- add entries below to opt out or
+# override params for this repo specifically.
+#
+# Opt-outs are visible in the dashboard (the engine emits an OK finding with
+# "disabled by .github/.ai-compliance.yaml" so coverage reductions stay
+# auditable). Edits take effect on the next dashboard refresh.
+#
+# Source of truth for valid check IDs:
+#   https://github.com/augmenting-integrations/ai-cc-tools/blob/main/plugins/ai-standardize/standards.yaml
+# =============================================================================
+
+metadata:
+  standards_version: "2026-04-22"
+  last_standardized: "2026-04-23"
+  last_standardized_by: "7166607+svange@users.noreply.github.com"
+
+disabled_checks:
+  - id: workflow.no_cheating
+    reason: "Service pipeline uses continue-on-error/set+e in post-gate jobs (cleanup, release, docs) -- not
+  merge-decision gates"
+    created_at: 2026-04-23
+    approved_by: "samuelvange@gmail.com"
+
+overrides: {}
