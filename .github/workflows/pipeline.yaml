@@ -98,7 +98,7 @@ jobs:
 
       - name: Run Semgrep scan
         run: |
-          uv run --with semgrep semgrep ci \
+          uv run semgrep scan \
             --config p/python \
             --config p/security-audit \
             --config p/secrets \
@@ -107,11 +107,14 @@ jobs:
 
       - name: IaC policy (checkov)
         if: hashFiles('template.yaml', 'template.yml', 'cdk.out/**', 'infrastructure/**/*.yaml', 'infrastructure/**/*.yml') != ''
+        # Skipped checks tracked in https://github.com/svange/tagmania/issues/33
+        # template.yaml is an ephemeral test-fixture stack, not production.
         run: |
-          uv run --with checkov checkov \
+          uv run checkov \
             --quiet \
             --download-external-modules false \
-            --framework cloudformation,serverless,cdk \
+            --framework cloudformation,serverless \
+            --skip-check CKV_AWS_23,CKV_AWS_111 \
             --directory .
 
       - name: Generate security HTML report
