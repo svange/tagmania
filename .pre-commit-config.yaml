@@ -4,18 +4,23 @@ repos:
     hooks:
       - id: check-yaml
         exclude: '(^templates/.*\.yaml$|.*template\.yaml$)'
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: debug-statements
+      - id: detect-private-key
       - id: end-of-file-fixer
       - id: trailing-whitespace
-      - id: check-merge-conflict
-      - id: detect-private-key
 
   - repo: local
     hooks:
       - id: forbid-env-commit
-        name: Block committed .env files
-        entry: python -c "import subprocess, sys; files = subprocess.run(['git', 'ls-files'], capture_output=True, text=True).stdout; sys.exit(1 if any(f.endswith('/.env') or f == '.env' for f in files.splitlines()) else 0)"
-        language: system
-        pass_filenames: false
+        name: Block .env files
+        entry: ".env files must not be committed"
+        language: fail
+        files: '(^|/)\.env($|\.)'
+        exclude: '(^|/)\.env\.example$'
 
       - id: ruff-format
         name: Ruff format
@@ -44,3 +49,8 @@ repos:
         language: system
         files: 'pyproject\.toml$'
         pass_filenames: false
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.0
+    hooks:
+      - id: gitleaks

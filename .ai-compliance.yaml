@@ -1,0 +1,53 @@
+# .ai-compliance.yaml
+# =============================================================================
+# Per-repo overrides for the org-wide compliance engine.
+#
+# The engine lives in augint-tools (TUI dashboard) and evaluates the rules in
+# ai-cc-tools' canonical standards.yaml against this repo on every dashboard
+# refresh. By default every rule applies -- uncomment sections below to opt
+# out or override params for this repo specifically.
+#
+# Opt-outs are visible in the dashboard (the engine emits an OK finding with
+# "disabled by .ai-compliance.yaml" so coverage reductions stay auditable).
+# Edits take effect on the next dashboard refresh; no deploy or restart.
+#
+# Source of truth for valid check IDs (canonical severity, rationale, etc.):
+#   https://github.com/augmenting-integrations/ai-cc-tools/blob/main/plugins/ai-standardize/standards.yaml
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# disabled_checks
+# -----------------------------------------------------------------------------
+# List of check IDs to skip for this repo. Default is empty -- every
+# applicable rule runs.
+disabled_checks: []
+
+# Examples (uncomment and edit as needed):
+#
+# disabled_checks:
+#   - deploy.health_probe              # Repo has no public prod URL yet
+#   - deploy.lambda_sha_matches_main   # Deployed via CDK stack, not Lambda
+#   - security.npm_audit_high          # Python-only repo, no package.json
+
+# -----------------------------------------------------------------------------
+# overrides
+# -----------------------------------------------------------------------------
+# Per-check parameter overrides, merged into the check's params before
+# evaluation. Common for handler-based checks that need repo-specific values
+# (real prod URL, custom IAM role naming, non-default tag key, etc.).
+overrides: {}
+
+# Examples:
+#
+# overrides:
+#   deploy.health_probe:
+#     url: "https://api.my-service.example.com/health"
+#     expected_status: 204
+#     timeout_seconds: 10
+#
+#   deploy.oidc_trust_scoped:
+#     role_name_template: "{repo_name}-github-deploy"  # non-default naming
+#
+#   deploy.lambda_sha_matches_main:
+#     function_name_template: "prod-{repo_name}-api"
+#     tag_key: "git_commit"  # if your deploy tags with a different key
