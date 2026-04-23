@@ -124,7 +124,7 @@ Full restore: stop instances -> detach volumes -> delete volumes -> create volum
 
 ## CI/CD Pipeline
 
-GitHub Actions pipeline (`.github/workflows/pipeline.yaml`) gates by canonical stage names:
+GitHub Actions pipeline (`.github/workflows/publish.yaml`) gates by canonical stage names:
 
 ### Pre-deploy gates (run on both PR and push, no AWS required)
 

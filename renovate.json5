@@ -13,8 +13,10 @@
   "schedule": ["before 11:59pm on Sunday"],
   "timezone": "America/Los_Angeles",
   "platformAutomerge": true,
-  // "auto" defers to repo merge method settings
-  "automergeStrategy": "auto",
+  // "merge-commit" ensures Renovate PRs preserve individual commit messages
+  // through dev->main promotion. "auto" or "squash" would drop semantic-release
+  // commit markers, breaking the release cycle.
+  "automergeStrategy": "merge-commit",
   "rangeStrategy": "auto",
 
   "enabledManagers": [
