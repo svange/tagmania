@@ -15,7 +15,6 @@ env:
   TESTING_CLOUDFORMATION_EXECUTION_ROLE: ${{ vars.TESTING_CLOUDFORMATION_EXECUTION_ROLE }}
   TESTING_PIPELINE_EXECUTION_ROLE: ${{ vars.TESTING_PIPELINE_EXECUTION_ROLE }}
   AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
-  GH_TOKEN: ${{ secrets.GH_TOKEN }}
   MODULE_NAME: ${{ vars.MODULE_NAME }}
   PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.12' }}
   TESTING_STACK_NAME: ${{ github.event.repository.name }}-testing
@@ -274,7 +273,7 @@ jobs:
 
       - name: Set up SAM CLI
         if: steps.check_template.outputs.exists == 'true'
-        uses: aws-actions/setup-sam@v2
+        uses: aws-actions/setup-sam@f84ec7d548307efafe33230528756de3c5841a17 # v2
         with:
           use-installer: true
 
@@ -477,6 +476,8 @@ jobs:
 
       - name: Run semantic release
         id: release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           RELEASED="false"
 
