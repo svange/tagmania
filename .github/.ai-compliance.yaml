@@ -20,11 +20,10 @@ metadata:
   last_standardized: "2026-04-23"
   last_standardized_by: "7166607+svange@users.noreply.github.com"
 
-disabled_checks:
-  - id: workflow.no_cheating
-    reason: "Service pipeline uses continue-on-error/set+e in post-gate jobs (cleanup, release, docs) -- not
-  merge-decision gates"
-    created_at: 2026-04-23
-    approved_by: "samuelvange@gmail.com"
+# No opt-outs: the post-gate suppressions (cleanup/release/docs
+# continue-on-error, set +e, set +o pipefail, || true) that the former
+# workflow.no_cheating waiver covered have been removed from
+# .github/workflows/publish.yaml, so the pipeline now complies on its merits.
+disabled_checks: []
 
 overrides: {}
