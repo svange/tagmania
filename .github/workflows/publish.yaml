@@ -378,10 +378,12 @@ jobs:
       group: testing-stack-${{ github.repository }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
-    # Cleanup is best-effort: failures show red on this job but do not
-    # fail the workflow. Investigate red cleanup jobs -- usually a test
-    # template change or a terminal CloudFormation state.
-    continue-on-error: true
+    # Cleanup runs even when the acceptance tests fail (if: always() above)
+    # so the ephemeral test stack is always torn down. It is NOT a required
+    # status check, so a genuine teardown failure surfaces red on this job --
+    # investigate it (usually a test-template change or a terminal
+    # CloudFormation state) -- without blocking merges. A teardown failure is
+    # no longer silently swallowed.
     permissions:
       id-token: write
       contents: read
@@ -451,11 +453,11 @@ jobs:
 
       - name: Verify upstream has not changed
         run: |
-          set +o pipefail
-          UPSTREAM_BRANCH_NAME="$(git status -sb | head -n 1 | cut -d' ' -f2 | grep -E '\.{3}' | cut -d'.' -f4)"
-          set -o pipefail
-
-          if [ -z "$UPSTREAM_BRANCH_NAME" ]; then
+          # Read the tracking branch directly instead of parsing `git status`
+          # through a fragile head|grep pipeline that could abort on SIGPIPE
+          # or a non-matching grep. A missing upstream is handled explicitly
+          # below.
+          if ! UPSTREAM_BRANCH_NAME="$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null)"; then
               echo "::error::Unable to determine upstream branch name!"
               exit 1
           fi
@@ -481,19 +483,27 @@ jobs:
         run: |
           RELEASED="false"
 
-          set +e
-          uv run semantic-release --strict version
-          SEMANTIC_EXIT_CODE=$?
-          set -e
-
-          if [ $SEMANTIC_EXIT_CODE -eq 0 ]; then
+          # `semantic-release --strict version` exit codes:
+          #   0     -> a release was made
+          #   2     -> no release needed (nothing to release / already released)
+          #   other -> a genuine failure that must NOT be swallowed
+          # Running it as the `if` condition lets the shell tolerate the
+          # expected non-zero (exit 2) without aborting the step, while real
+          # errors (exit 1, etc.) still fail the step.
+          if uv run semantic-release --strict version; then
             echo "Semantic release succeeded"
             RELEASED="true"
           else
-            echo "No release needed"
+            SEMANTIC_EXIT_CODE=$?
+            if [ "$SEMANTIC_EXIT_CODE" -eq 2 ]; then
+              echo "No release needed"
+            else
+              echo "::error::semantic-release failed with exit code $SEMANTIC_EXIT_CODE"
+              exit "$SEMANTIC_EXIT_CODE"
+            fi
           fi
 
-          echo "released=$RELEASED" >> $GITHUB_OUTPUT
+          echo "released=$RELEASED" >> "$GITHUB_OUTPUT"
 
       - name: Upload distribution artifacts
         if: steps.release.outputs.released == 'true'
@@ -562,35 +572,37 @@ jobs:
       - name: Generate documentation
         run: |
           mkdir -p docs
-          uv run pdoc --output-dir docs src/tagmania || true
+          uv run pdoc --output-dir docs src/tagmania
 
+      # This job only runs after `release`, which needs the acceptance-tests,
+      # security, compliance and unit-tests jobs to succeed (implicit
+      # success() gate). Every report artifact below is therefore guaranteed
+      # to exist whenever this job runs, so the downloads are unguarded: a
+      # genuinely missing artifact is an anomaly that should fail loudly here
+      # rather than deploy an incomplete docs site.
       - name: Download coverage reports
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-reports
           path: docs/coverage
-        continue-on-error: true
 
       - name: Download security reports
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: security-reports
           path: docs/security
-        continue-on-error: true
 
       - name: Download compliance reports
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: compliance-reports
           path: docs/compliance
-        continue-on-error: true
 
       - name: Download unit test report
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: unit-test-reports
           path: docs/tests
-        continue-on-error: true
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
