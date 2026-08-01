@@ -7,6 +7,10 @@
 
 Manic tools for manipulating sets of tagged resources in AWS.
 
+**Stack:** Python ≥ 3.12 command-line library built on `boto3` (the only runtime dependency), packaged and locked with [`uv`](https://docs.astral.sh/uv/) and released by [Python Semantic Release](https://python-semantic-release.readthedocs.io/). CI runs on GitHub Actions; integration-test infrastructure is defined as an AWS SAM / CloudFormation template.
+
+**Deploy target:** Tagmania is a **library**, not a hosted service. It ships as the [`tagmania`](https://pypi.org/project/tagmania/) package on PyPI, and its API docs plus pipeline reports publish to [GitHub Pages](https://svange.github.io/tagmania/). The only cloud footprint is an *ephemeral* SAM/CloudFormation stack (`template.yaml`) that CI stands up to provide the `test1` integration-test cluster and tears down afterward — there is no production deployment.
+
 ---
 
 ## Pipeline Artifacts
@@ -22,6 +26,31 @@ Manic tools for manipulating sets of tagged resources in AWS.
 | PyPI | [pypi.org/project/tagmania](https://pypi.org/project/tagmania/) |
 
 Per-run downloadable artifacts (`bandit-report.json`, `pip-audit-report.json`, `coverage.xml`, `test-report.html`, `license-report.json`, built `dist/` on release) are available under the [Actions tab](https://github.com/svange/tagmania/actions) > select a run > scroll to "Artifacts".
+
+---
+
+## Documentation
+
+Start with the doc that matches what you're trying to do:
+
+| I want to… | Read |
+|------------|------|
+| Understand how the code fits together | [Architecture](#architecture) (in this README) |
+| Work in this repo as an AI agent | [`CLAUDE.md`](CLAUDE.md) — authoritative agent contract (commands, critical rules, CI/CD flow), mirrored for other assistants by [`AGENTS.md`](AGENTS.md) and [`.github/copilot-instructions.md`](.github/copilot-instructions.md) |
+| Follow real-world command recipes (runbook) | [`EXAMPLES.md`](EXAMPLES.md) — full-cluster backup/restore, targeted restore, cron snapshots, cross-region caveats |
+| Contribute code by hand | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| Inspect the test-fixture infrastructure (IaC) | [`template.yaml`](template.yaml) — the AWS SAM stack CI uses for integration tests |
+| Report a security vulnerability | [`.github/SECURITY.md`](.github/SECURITY.md) |
+| Get help or ask a question | [`SUPPORT.md`](SUPPORT.md) |
+| Review the release history | [`CHANGELOG.md`](CHANGELOG.md) |
+
+---
+
+## Release & Branch Model
+
+Feature branches (`{type}/issue-N-description`) merge into **`main`**, which is both the default branch and the sole release source. Every push to `main` runs the [CI/CD pipeline](.github/workflows/publish.yaml): the required gates run, then [Python Semantic Release](https://python-semantic-release.readthedocs.io/) derives the next version from the Conventional Commit history, tags `v{version}`, publishes the wheel to [PyPI](https://pypi.org/project/tagmania/), and refreshes the [GitHub Pages](https://svange.github.io/tagmania/) reports.
+
+As a published library, Tagmania has no runtime environments (dev / staging / prod) to map branches onto — the PyPI release *is* the deploy. The only cloud infrastructure is the ephemeral SAM test stack CI creates and destroys on each run.
 
 ---
 
