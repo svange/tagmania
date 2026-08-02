@@ -19,7 +19,6 @@
 # metadata
 # -----------------------------------------------------------------------------
 # Tracks which standards version this repo was last standardized against.
-# Updated automatically by /ai-standardize-compliance.
 metadata:
   standards_version: "2026-04-22"
   last_standardized: "2026-04-23"
