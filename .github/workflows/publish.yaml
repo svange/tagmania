@@ -237,8 +237,8 @@ jobs:
           name: unit-test-reports
           path: test-report.html
 
-  deploy-test-infrastructure:
-    name: Deploy test infrastructure
+  acceptance-tests:
+    name: Acceptance tests
     runs-on: ubuntu-latest
     needs: [security, compliance, build-validation, unit-tests]
     if: |
@@ -247,12 +247,21 @@ jobs:
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name == 'pull_request' && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository)
       )
+    # Deploy, test, and teardown MUST stay in this ONE job. Job-level
+    # concurrency holds the mutex below only while the job runs, so keeping the
+    # whole fixture lifecycle here means the mutex spans deploy -> test ->
+    # teardown. Splitting these into separate jobs releases the mutex between
+    # them, letting a concurrent run's teardown delete the shared test stack --
+    # detaching EC2TestingPolicy from the shared pipeline role -- mid-test. That
+    # surfaces as `UnauthorizedOperation: ec2:DescribeInstances` even though
+    # OIDC AssumeRole succeeded. See template.yaml EC2TestingPolicy.
     concurrency:
       group: testing-stack-${{ github.repository }}
       cancel-in-progress: false
-    # Gate deploy on the `approval-required` environment for outside-contributor
-    # PRs only; repo owner and MAINTAINERS bypass, push events run unattended.
-    # Reviewers and admin-bypass policy live in repo Settings -> Environments.
+    # Gate the AWS lifecycle on the `approval-required` environment for
+    # outside-contributor PRs only; repo owner and MAINTAINERS bypass, push
+    # events run unattended. Reviewers and admin-bypass policy live in repo
+    # Settings -> Environments.
     environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
     permissions:
       id-token: write
@@ -278,12 +287,11 @@ jobs:
           use-installer: true
 
       - name: Configure AWS credentials
-        if: steps.check_template.outputs.exists == 'true'
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
           aws-region: ${{ env.TESTING_REGION }}
-          role-session-name: testing-infra
+          role-session-name: testing-acceptance
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
@@ -301,34 +309,6 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE} \
             --parameter-overrides PipelineExecutionRoleName=${PIPELINE_ROLE_NAME}
-
-  acceptance-tests:
-    name: Acceptance tests
-    needs: [deploy-test-infrastructure]
-    if: |
-      vars.TESTING_PIPELINE_EXECUTION_ROLE != '' &&
-      (
-        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-        (github.event_name == 'pull_request' && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository)
-      )
-    concurrency:
-      group: testing-stack-${{ github.repository }}
-      cancel-in-progress: false
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
-        with:
-          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
-          aws-region: ${{ env.TESTING_REGION }}
-          role-session-name: testing-pipeline
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -367,36 +347,12 @@ jobs:
           name: acceptance-test-reports
           path: test-report.html
 
-  cleanup-test-infrastructure:
-    name: Cleanup test infrastructure
-    needs: [deploy-test-infrastructure, acceptance-tests]
-    if: |
-      always() &&
-      needs.deploy-test-infrastructure.result != 'skipped' &&
-      vars.TESTING_PIPELINE_EXECUTION_ROLE != ''
-    concurrency:
-      group: testing-stack-${{ github.repository }}
-      cancel-in-progress: false
-    runs-on: ubuntu-latest
-    # Cleanup runs even when the acceptance tests fail (if: always() above)
-    # so the ephemeral test stack is always torn down. It is NOT a required
-    # status check, so a genuine teardown failure surfaces red on this job --
-    # investigate it (usually a test-template change or a terminal
-    # CloudFormation state) -- without blocking merges. A teardown failure is
-    # no longer silently swallowed.
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
-        with:
-          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
-          aws-region: ${{ env.TESTING_REGION }}
-          role-session-name: testing-cleanup
-
+      # Teardown runs in this same job while it still holds the concurrency
+      # mutex, so the ephemeral stack is torn down even when the tests fail and
+      # no other run can be mid-test while it happens. A teardown failure fails
+      # this required job loudly rather than being silently swallowed.
       - name: Delete test infrastructure stack
+        if: always() && steps.check_template.outputs.exists == 'true'
         run: |
           aws cloudformation delete-stack \
             --stack-name "${TESTING_STACK_NAME}" \
@@ -405,6 +361,7 @@ jobs:
           echo "Delete stack initiated for ${TESTING_STACK_NAME}"
 
       - name: Wait for stack deletion to complete
+        if: always() && steps.check_template.outputs.exists == 'true'
         run: |
           echo "Waiting for stack deletion to complete..."
           aws cloudformation wait stack-delete-complete \
