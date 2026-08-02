@@ -59,11 +59,11 @@ Version in `pyproject.toml` and `src/tagmania/__init__.py`:
 
 **IMPORTANT**: Always follow this sequence. Do NOT skip to step 3 without completing step 2 first.
 
-1. **Pick an issue**: `/ai-pick-issue` -- find or get assigned work
-2. **Prepare branch**: `/ai-prepare-branch` -- REQUIRED before any code changes. Creates a fresh branch from the latest base (main or dev), syncs upstream, sets up remote tracking. Never start coding on an existing branch from a previous task.
-3. **Develop**: Write code with tests, following project conventions
-4. **Submit**: `/ai-submit-work` -- runs all checks locally, commits, pushes, creates automerge PR
-5. **Monitor**: `/ai-monitor-pipeline` -- watches CI, diagnoses failures, auto-fixes and re-pushes
+1. **Pick an issue**: find or get assigned work.
+2. **Prepare branch**: REQUIRED before any code changes. Create a fresh branch from the latest base (main or dev), sync upstream, and set up remote tracking. Never start coding on an existing branch from a previous task.
+3. **Develop**: Write code with tests, following project conventions.
+4. **Submit**: Run all checks locally, then commit, push, and open an automerge PR.
+5. **Monitor**: Watch CI, diagnose any failures, and fix and re-push until the pipeline is green.
 
 ## Testing
 
