@@ -251,18 +251,18 @@ jobs:
     # concurrency holds the mutex below only while the job runs, so keeping the
     # whole fixture lifecycle here means the mutex spans deploy -> test ->
     # teardown. Splitting these into separate jobs releases the mutex between
-    # them, letting a concurrent run's teardown delete the shared test stack --
-    # detaching EC2TestingPolicy from the shared pipeline role -- mid-test. That
-    # surfaces as `UnauthorizedOperation: ec2:DescribeInstances` even though
-    # OIDC AssumeRole succeeded. See template.yaml EC2TestingPolicy.
+    # them, letting a concurrent run's teardown delete the shared test stack
+    # and its test instances mid-test.
     concurrency:
       group: testing-stack-${{ github.repository }}
       cancel-in-progress: false
-    # Gate the AWS lifecycle on the `approval-required` environment for
-    # outside-contributor PRs only; repo owner and MAINTAINERS bypass, push
-    # events run unattended. Reviewers and admin-bypass policy live in repo
-    # Settings -> Environments.
-    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || '' }}
+    # Every run takes a GitHub environment, because the AWS role
+    # (GitHubDeployRole, bound by the organisation) trusts only environment
+    # subjects. Outside-contributor PRs take `approval-required`, which has
+    # reviewers; the repo owner, MAINTAINERS and push events take `testing`,
+    # which has none. Both are bound on the testing account. Reviewers and
+    # admin-bypass policy live in repo Settings -> Environments.
+    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner && !contains(fromJSON(vars.MAINTAINERS || '[]'), github.event.pull_request.user.login) && 'approval-required' || 'testing' }}
     permissions:
       id-token: write
       contents: read
@@ -298,8 +298,6 @@ jobs:
       - name: Deploy test infrastructure
         if: steps.check_template.outputs.exists == 'true'
         run: |
-          PIPELINE_ROLE_NAME=${TESTING_PIPELINE_EXECUTION_ROLE##*/}
-
           sam deploy \
             --stack-name ${TESTING_STACK_NAME} \
             --template-file template.yaml \
@@ -307,8 +305,7 @@ jobs:
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
-            --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE} \
-            --parameter-overrides PipelineExecutionRoleName=${PIPELINE_ROLE_NAME}
+            --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE}
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
