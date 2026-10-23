@@ -18,10 +18,6 @@ Parameters:
     Default: test3
     Description: Name of the third test cluster (1 instance, for CLI tests)
 
-  PipelineExecutionRoleName:
-    Type: String
-    Description: Name of the pipeline execution role that needs EC2 testing permissions
-
 Resources:
   # VPC for test instances
   TestVPC:
@@ -190,64 +186,6 @@ Resources:
         - Key: Owner
           Value: test
 
-  # Managed Policy for EC2 testing operations
-  EC2TestingPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: !Sub "${AWS::StackName}-EC2TestingPolicy"
-      Description: "Policy for EC2 testing operations on tagged clusters"
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: EC2ReadOperations
-            Effect: Allow
-            Action:
-              - ec2:DescribeInstances
-              - ec2:DescribeSnapshots
-              - ec2:DescribeVolumes
-              - ec2:DescribeImages
-              - ec2:DescribeAvailabilityZones
-            Resource: "*"
-          - Sid: EC2InstanceOperations
-            Effect: Allow
-            Action:
-              - ec2:StartInstances
-              - ec2:StopInstances
-            Resource: "*"
-            Condition:
-              StringEquals:
-                ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name, !Ref Cluster3Name]
-          - Sid: EC2VolumeTaggedOperations
-            Effect: Allow
-            Action:
-              - ec2:DeleteVolume
-              - ec2:AttachVolume
-              - ec2:CreateTags
-              - ec2:DeleteTags
-            Resource: "*"
-            Condition:
-              StringEquals:
-                ec2:ResourceTag/Cluster: [!Ref Cluster1Name, !Ref Cluster2Name, !Ref Cluster3Name]
-          - Sid: EC2VolumeUntaggedOperations
-            Effect: Allow
-            Action:
-              - ec2:CreateVolume
-            Resource: "*"
-          - Sid: EC2VolumeOperations
-            Effect: Allow
-            Action:
-              - ec2:DetachVolume
-            Resource: "*"
-          - Sid: EC2SnapshotOperations
-            Effect: Allow
-            Action:
-              - ec2:CreateSnapshot
-              - ec2:DeleteSnapshot
-              - ec2:CreateTags
-            Resource: "*"
-      Roles:
-        - !Ref PipelineExecutionRoleName
-
 Outputs:
   Cluster1Name:
     Description: Name of the first test cluster
@@ -302,9 +240,3 @@ Outputs:
     Value: !Ref Cluster3Instance1
     Export:
       Name: !Sub "${AWS::StackName}-Cluster3Instance1"
-
-  EC2TestingPolicyArn:
-    Description: ARN of the EC2 testing policy attached to pipeline execution role
-    Value: !Ref EC2TestingPolicy
-    Export:
-      Name: !Sub "${AWS::StackName}-EC2TestingPolicy"
