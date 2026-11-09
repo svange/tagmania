@@ -38,7 +38,7 @@ import argparse
 from tagmania.iac_tools.clusterset import ClusterSet
 
 
-def main():
+def main() -> None:
     """Main entry point for the cluster stop CLI.
 
     Parses command line arguments to identify the cluster name and optional
@@ -56,7 +56,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="AWS cluster stop tool.",
         epilog='This tool relies on the "Cluster" and "Owner" tags on instances and '
-        "volumes. IAC automation puts this in place."
+        "volumes. IAC automation puts this in place. "
         "Stops the cluster CLUSTER.",
     )
     parser.add_argument(

@@ -40,7 +40,7 @@ from tagmania.iac_tools import util
 from tagmania.iac_tools.clusterset import ClusterSet
 
 
-def main():
+def main() -> None:
     """Main entry point for the cluster tag management CLI.
 
     Parses command line arguments and executes tag operations (add/remove)
@@ -100,7 +100,7 @@ def main():
 
     # Perform tagging operations
     if args.tag:
-        tags = []
+        tags: list[dict[str, str]] = []
         for tag in args.tag:
             pair = tag.split(":")
             tags.append({"Key": pair[0], "Value": pair[1]})
@@ -113,35 +113,26 @@ def main():
 
         # Tag lambda functions
         print("Tagging lambda function(s)")
-        lambda_arn = util.get_lambda_arn("TAGMANIA-AUTO-" + args.cluster)
-        # Lambda tagging uses an plain dictionary of keys and values
-        lambda_tags = {}
-        for tag in tags:
-            key = tag["Key"]
-            value = tag["Value"]
-            lambda_tags[key] = value
+        lambda_arn = util.get_lambda_arn(f"TAGMANIA-AUTO-{args.cluster}")
+        # Lambda tagging uses a plain dictionary of keys and values
+        lambda_tags = {tag["Key"]: tag["Value"] for tag in tags}
         util.tag_lambda_functions([lambda_arn], lambda_tags)
 
     # Perform un-tagging operations
     if args.untag:
-        tags = []
-        for tag in args.untag:
-            tags.append({"Key": tag})
+        untag_list: list[dict[str, str]] = [{"Key": tag} for tag in args.untag]
 
         # Un-tag EC2 resources
-        cluster.untag_instances(tags)
-        cluster.untag_volumes(tags)
-        cluster.untag_snapshots(tags)
-        # cluster.untag_subnet(tags)
+        cluster.untag_instances(untag_list)
+        cluster.untag_volumes(untag_list)
+        cluster.untag_snapshots(untag_list)
+        # cluster.untag_subnet(untag_list)
 
         # Un-tag lambda functions
         print("Un-tagging lambda function(s)")
-        lambda_arn = util.get_lambda_arn("TAGMANIA-AUTO-" + args.cluster)
+        lambda_arn = util.get_lambda_arn(f"TAGMANIA-AUTO-{args.cluster}")
         # Lambda un-tagging uses a plain list of keys
-        lambda_keys = []
-        for tag in tags:
-            key = tag["Key"]
-            lambda_keys.append(key)
+        lambda_keys = [tag["Key"] for tag in untag_list]
         util.untag_lambda_functions([lambda_arn], lambda_keys)
 
 

@@ -34,7 +34,7 @@ import argparse
 from tagmania.iac_tools.clusterset import ClusterSet
 
 
-def main():
+def main() -> None:
     """Main entry point for the cluster start CLI.
 
     Parses command line arguments to identify the cluster name and optional
@@ -52,7 +52,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="AWS cluster start tool.",
         epilog='This tool relies on the "Cluster" and "Owner" tags on instances and '
-        "volumes. IAC automation puts this in place."
+        "volumes. IAC automation puts this in place. "
         "Starts the cluster CLUSTER.",
     )
     parser.add_argument(

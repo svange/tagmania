@@ -1,13 +1,16 @@
+"""AWS Cluster Snapshot Deletion CLI."""
+
 import argparse
 
 from tagmania.iac_tools.clusterset import ClusterSet
 
 
-def main():
+def main() -> None:
+    """Main entry point for the cluster snapshot deletion CLI."""
     parser = argparse.ArgumentParser(
         description="AWS cluster snapshot deletion.",
         epilog='This tool relies on the "Cluster" and "Owner" tags on instances and '
-        "volumes. IAC automation puts this in place."
+        "volumes. IAC automation puts this in place. "
         "This tool deletes all snapshots belonging to a cluster.",
     )
     parser.add_mutually_exclusive_group(required=True)

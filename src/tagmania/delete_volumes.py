@@ -1,14 +1,22 @@
+"""AWS Cluster Volume Deletion CLI.
+
+This module provides a command-line interface for listing and deleting managed
+EBS volumes (including dynamically created Kubernetes volumes) associated with
+an EC2 cluster identified by its "Cluster" tag.
+"""
+
 import argparse
 
 from tagmania.iac_tools.clusterset import ClusterSet
 from tagmania.iac_tools.tagset import TagSet
 
 
-def main():
+def main() -> None:
+    """Main entry point for the cluster volume deletion CLI."""
     parser = argparse.ArgumentParser(
         description="AWS cluster volume deletion.",
         epilog='This tool relies on the "Cluster" and "Owner" tags on instances and '
-        "volumes. IAC automation puts this in place"
+        "volumes. IAC automation puts this in place. "
         "This tool deletes all volumes belonging to a cluster.",
     )
     group = parser.add_mutually_exclusive_group(required=True)
@@ -19,7 +27,7 @@ def main():
         dest="delete",
         const=True,
         default=False,
-        help="Delete snapshots from cluster CLUSTER.",
+        help="Delete volumes from cluster CLUSTER.",
     )
     group.add_argument(
         "-l",
@@ -28,7 +36,7 @@ def main():
         dest="list",
         const=True,
         default=False,
-        help="List snapshots with a given label or all if none specified.",
+        help="List volumes belonging to cluster CLUSTER.",
     )
     parser.add_argument(
         "cluster",
@@ -50,14 +58,13 @@ def main():
         for volume in volumes:
             print(volume.id)
 
-        if len(kubernetes_volumes) != 0:
+        if kubernetes_volumes:
             print(f"\nKubernetes dynamically created volumes for cluster {args.cluster}:")
             for volume in kubernetes_volumes:
-                ts = TagSet(volume.tags)
-                volume_name = ts.get("Name")
-                print(volume.id + " (" + volume_name + ")")
+                volume_name = TagSet(volume.tags).get("Name") or ""
+                print(f"{volume.id} ({volume_name})")
 
-        if len(volumes) == 0 and len(kubernetes_volumes) == 0:
+        if not volumes and not kubernetes_volumes:
             print("No volumes found.")
 
     if args.delete:
@@ -66,18 +73,17 @@ def main():
             print(volume.id)
 
         for volume in kubernetes_volumes:
-            ts = TagSet(volume.tags)
-            volume_name = ts.get("Name")
-            print(volume.id + " (" + volume_name + ")")
+            volume_name = TagSet(volume.tags).get("Name") or ""
+            print(f"{volume.id} ({volume_name})")
 
-        if len(volumes) != 0 or len(kubernetes_volumes) != 0:
+        if volumes or kubernetes_volumes:
             confirm = input('Do you want to delete these volumes? (only "yes" is accepted): ')
             if confirm != "yes":
                 print("Command Aborted.")
             else:
-                if len(volumes) != 0:
+                if volumes:
                     cluster.delete_volumes()
-                if len(kubernetes_volumes) != 0:
+                if kubernetes_volumes:
                     cluster.delete_kubernetes_volumes()
         else:
             print("No volumes found.")
