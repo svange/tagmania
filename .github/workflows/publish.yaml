@@ -295,6 +295,12 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
+      # Removes volumes and snapshots that a crashed or cancelled run left
+      # behind. Safe here: this job holds the testing-stack mutex.
+      - name: Clean up leftover test resources
+        if: steps.check_template.outputs.exists == 'true'
+        run: scripts/ci-cleanup-test-resources.sh "${TESTING_STACK_NAME}" "${TESTING_REGION}"
+
       - name: Deploy test infrastructure
         if: steps.check_template.outputs.exists == 'true'
         run: |
@@ -366,6 +372,13 @@ jobs:
             --region "${TESTING_REGION}"
 
           echo "Stack ${TESTING_STACK_NAME} successfully deleted"
+
+      # Stack deletion does not remove root volumes that a restore detached,
+      # or restore volumes that tagmania attached (DeleteOnTermination is
+      # false for them). See scripts/ci-cleanup-test-resources.sh.
+      - name: Delete leaked test volumes and snapshots
+        if: always() && steps.check_template.outputs.exists == 'true'
+        run: scripts/ci-cleanup-test-resources.sh "${TESTING_STACK_NAME}" "${TESTING_REGION}"
 
   release:
     name: Semantic release
