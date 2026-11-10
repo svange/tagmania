@@ -46,6 +46,7 @@ import logging
 import re
 
 from tagmania.iac_tools.clusterset import ClusterSet
+from tagmania.iac_tools.tagset import TagSet
 from tagmania.iac_tools.timing import log_duration
 
 
@@ -60,7 +61,7 @@ def _configure_logging() -> logging.Logger:
     return logger
 
 
-def main():
+def main() -> None:
     """Main entry point for the cluster snapshot management CLI.
 
     Parses command line arguments and executes the appropriate snapshot operation
@@ -146,7 +147,7 @@ def main():
         if confirm == "yes":
             print("Making backup.")
             instances = cluster.get_instances()
-            if len(instances) == 0:
+            if not instances:
                 print("No instances found. Operation aborted.")
             else:
                 with log_duration(logger, "backup"):
@@ -170,7 +171,7 @@ def main():
         if confirm == "yes":
             print("Deleting snapshots.")
             snapshots = cluster.get_snapshots(snapshot_name)
-            if len(snapshots) == 0:
+            if not snapshots:
                 print("No snapshots found. Operation aborted.")
             else:
                 cluster.delete_snapshots(snapshot_name)
@@ -190,7 +191,7 @@ def main():
                 instances = cluster.get_instances()
                 filtered_instances = cluster._filter_instances_by_name_regex(instances, args.target)
 
-                if len(filtered_instances) == 0:
+                if not filtered_instances:
                     print(
                         f"No instances found matching pattern '{args.target}'. Operation aborted."
                     )
@@ -199,12 +200,7 @@ def main():
                         f"Found {len(filtered_instances)} instances matching pattern '{args.target}':"
                     )
                     for instance in filtered_instances:
-                        name_tag = "Unknown"
-                        if instance.tags:
-                            for tag in instance.tags:
-                                if tag["Key"] == "Name":
-                                    name_tag = tag["Value"]
-                                    break
+                        name_tag = TagSet(instance.tags).get("Name") or "Unknown"
                         print(f"  - {instance.id} ({name_tag})")
 
                     confirm = input(
@@ -235,7 +231,7 @@ def main():
             if confirm == "yes":
                 print("Restoring cluster.")
                 instances = cluster.get_instances()
-                if len(instances) == 0:
+                if not instances:
                     print("No instances found. Operation aborted.")
                 else:
                     with log_duration(logger, "restore"):
@@ -258,22 +254,16 @@ def main():
             print(f"Listing all snapshots associated with {args.cluster}.")
             snapshots = cluster.get_snapshots("*")
 
-            # Getting a dictionary of all snapshots associated with the cluster provided grouped by label
-            label_list = []
+            # Group snapshots by Label tag value
             snapshot_dict: dict[str, list[str]] = {}
             for snapshot in snapshots:
                 for tag in snapshot.tags:
-                    if "Label" in tag["Key"] and tag["Value"] not in label_list:
-                        label_list.append(tag["Value"])
-                        snapshot_dict[tag["Value"]] = []
-                        snapshot_dict[tag["Value"]].append(snapshot.id)
-                    elif "Label" in tag["Key"]:
-                        snapshot_dict[tag["Value"]].append(snapshot.id)
+                    if "Label" in tag["Key"]:
+                        snapshot_dict.setdefault(tag["Value"], []).append(snapshot.id)
 
-            # Printing snapshots sorted by Label name
-            label_list.sort()
-            for label in label_list:
-                print("\nLabel: " + label)
+            # Print snapshots sorted by Label name
+            for label in sorted(snapshot_dict):
+                print(f"\nLabel: {label}")
                 for snapshot_id in snapshot_dict[label]:
                     print(snapshot_id)
         else:

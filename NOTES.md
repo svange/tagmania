@@ -23,7 +23,7 @@
 ```bash
 uv sync --all-extras                         # Install dependencies
 uv run pytest                                # Run tests
-uv run pytest --cov=src --cov-fail-under=80  # Tests with coverage
+uv run pytest --cov=src                      # Tests with coverage (threshold in pyproject.toml)
 uv run ruff check src/                       # Lint
 uv run mypy src/                             # Type check
 uv run pre-commit run --all-files            # Run all pre-commit hooks
@@ -56,7 +56,7 @@ git log --oneline -10         # Recent commits
 # GitHub CLI
 gh issue list --state open    # View open issues
 gh pr create                  # Create pull request
-gh pr merge --auto --squash   # Enable automerge
+gh pr merge --auto --merge    # Enable automerge
 gh run list                   # List workflow runs
 gh run view <id>              # View run details
 gh run watch <id>             # Watch run in real-time

@@ -67,7 +67,9 @@ Version in `pyproject.toml` and `src/tagmania/__init__.py`:
 
 ## Testing
 
-Tests are all integration tests that hit real AWS. They are ordered by filename prefix (`test_10_`, `test_20_`, `test_30_`) and depend on a "test1" cluster existing in AWS.
+The test suite is split by filename prefix:
+- `test_01_` through `test_07_`: Fast mocked unit tests (no AWS credentials required).
+- `test_10_` through `test_30_`: Real-AWS integration tests ordered by prefix and isolated by cluster markers (`cluster1`, `cluster2`, `cluster3`, `cluster_all`) against `test1`, `test2`, and `test3` clusters provisioned via `template.yaml`.
 
 Markers:
 - `slow` - real AWS operations taking several minutes (snapshot create/restore)

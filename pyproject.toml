@@ -59,36 +59,6 @@ strict = true
 python_version = "3.12"
 warn_unused_ignores = false
 
-[[tool.mypy.overrides]]
-module = "tagmania.start_cluster"
-disallow_untyped_defs = false
-disallow_untyped_calls = false
-
-[[tool.mypy.overrides]]
-module = "tagmania.stop_cluster"
-disallow_untyped_defs = false
-disallow_untyped_calls = false
-
-[[tool.mypy.overrides]]
-module = "tagmania.snapshot_manager"
-disallow_untyped_defs = false
-disallow_untyped_calls = false
-
-[[tool.mypy.overrides]]
-module = "tagmania.delete_volumes"
-disallow_untyped_defs = false
-disallow_untyped_calls = false
-
-[[tool.mypy.overrides]]
-module = "tagmania.delete_snapshots"
-disallow_untyped_defs = false
-disallow_untyped_calls = false
-
-[[tool.mypy.overrides]]
-module = "tagmania.tag_manager"
-disallow_untyped_defs = false
-disallow_untyped_calls = false
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
