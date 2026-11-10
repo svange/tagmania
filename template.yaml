@@ -100,6 +100,7 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
+      PropagateTagsToVolumeOnCreation: true
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
@@ -117,12 +118,17 @@ Resources:
           Value: !Ref Cluster1Name
         - Key: Owner
           Value: test
+        # Lets scripts/ci-cleanup-test-resources.sh find this stack's root
+        # volumes after a restore detaches them.
+        - Key: TagmaniaTestStack
+          Value: !Ref AWS::StackName
 
   # Cluster 2 - Two Instances
   Cluster2Instance1:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
+      PropagateTagsToVolumeOnCreation: true
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
@@ -140,11 +146,16 @@ Resources:
           Value: !Ref Cluster2Name
         - Key: Owner
           Value: test
+        # Lets scripts/ci-cleanup-test-resources.sh find this stack's root
+        # volumes after a restore detaches them.
+        - Key: TagmaniaTestStack
+          Value: !Ref AWS::StackName
 
   Cluster2Instance2:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
+      PropagateTagsToVolumeOnCreation: true
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
@@ -162,12 +173,17 @@ Resources:
           Value: !Ref Cluster2Name
         - Key: Owner
           Value: test
+        # Lets scripts/ci-cleanup-test-resources.sh find this stack's root
+        # volumes after a restore detaches them.
+        - Key: TagmaniaTestStack
+          Value: !Ref AWS::StackName
 
   # Cluster 3 - Two Instances (for CLI tests, runs in parallel with Cluster 2)
   Cluster3Instance1:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
+      PropagateTagsToVolumeOnCreation: true
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
       SecurityGroupIds:
@@ -185,6 +201,10 @@ Resources:
           Value: !Ref Cluster3Name
         - Key: Owner
           Value: test
+        # Lets scripts/ci-cleanup-test-resources.sh find this stack's root
+        # volumes after a restore detaches them.
+        - Key: TagmaniaTestStack
+          Value: !Ref AWS::StackName
 
 Outputs:
   Cluster1Name:
