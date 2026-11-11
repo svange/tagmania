@@ -124,6 +124,8 @@ All CLIs accept `--profile` for AWS credential selection.
 
 Full restore: stop instances -> detach volumes -> delete volumes -> create volumes from snapshots -> attach volumes. Targeted restore follows the same steps but filtered by instance name regex. Note: instances are NOT auto-started after restore (start calls are commented out).
 
+Restore deletes only detached volumes tagged `automation_key` (`PROVISIONER` or `SNAPSHOT_MANAGER`). It keeps a detached volume without that tag, such as an instance's original root volume. This is intentional: the original volume is a fallback. Do not change restore to delete it. CI removes the volumes its test stack leaves behind with `scripts/ci-cleanup-test-resources.sh`.
+
 ## CI/CD Pipeline
 
 GitHub Actions pipeline (`.github/workflows/publish.yaml`) gates by canonical stage names:
