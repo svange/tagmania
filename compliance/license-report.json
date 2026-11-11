@@ -7,7 +7,7 @@
   {
     "License": "MIT License",
     "Name": "ConfigArgParse",
-    "Version": "1.7.5"
+    "Version": "1.9.0"
   },
   {
     "License": "MIT License",
@@ -17,7 +17,7 @@
   {
     "License": "BSD-3-Clause",
     "Name": "GitPython",
-    "Version": "3.1.57"
+    "Version": "3.2.1"
   },
   {
     "License": "BSD License",
@@ -27,22 +27,22 @@
   {
     "License": "BSD-3-Clause",
     "Name": "Markdown",
-    "Version": "3.10.3"
+    "Version": "3.11.3"
   },
   {
     "License": "BSD-3-Clause",
     "Name": "MarkupSafe",
-    "Version": "3.0.3"
+    "Version": "3.0.4"
   },
   {
     "License": "GNU Library or Lesser General Public License (LGPL)",
     "Name": "PyGithub",
-    "Version": "2.9.1"
+    "Version": "2.10.0"
   },
   {
     "License": "MIT",
     "Name": "PyJWT",
-    "Version": "2.13.0"
+    "Version": "2.15.1"
   },
   {
     "License": "Apache Software License",
@@ -57,7 +57,7 @@
   {
     "License": "BSD-2-Clause",
     "Name": "Pygments",
-    "Version": "2.20.0"
+    "Version": "2.21.0"
   },
   {
     "License": "MIT License",
@@ -72,7 +72,7 @@
   {
     "License": "Apache-2.0 AND MIT",
     "Name": "aiohttp",
-    "Version": "3.14.3"
+    "Version": "3.14.5"
   },
   {
     "License": "MIT License",
@@ -92,17 +92,17 @@
   {
     "License": "MIT",
     "Name": "anyio",
-    "Version": "4.14.2"
+    "Version": "4.16.0"
   },
   {
     "License": "Apache Software License",
     "Name": "argcomplete",
-    "Version": "3.7.0"
+    "Version": "3.7.2"
   },
   {
     "License": "MIT",
     "Name": "ast_serialize",
-    "Version": "0.6.0"
+    "Version": "0.13.1"
   },
   {
     "License": "MIT",
@@ -117,7 +117,7 @@
   {
     "License": "UNKNOWN",
     "Name": "augint-shell",
-    "Version": "0.106.0"
+    "Version": "0.117.0"
   },
   {
     "License": "UNKNOWN",
@@ -145,9 +145,9 @@
     "Version": "0.4.2"
   },
   {
-    "License": "MIT License",
+    "License": "MIT",
     "Name": "beartype",
-    "Version": "0.22.9"
+    "Version": "0.23.1"
   },
   {
     "License": "MIT License",
@@ -167,27 +167,27 @@
   {
     "License": "Apache-2.0",
     "Name": "boto3",
-    "Version": "1.43.62"
+    "Version": "1.44.0"
   },
   {
     "License": "MIT",
     "Name": "boto3-stubs",
-    "Version": "1.43.62"
+    "Version": "1.43.127"
   },
   {
     "License": "Apache-2.0",
     "Name": "botocore",
-    "Version": "1.43.62"
+    "Version": "1.44.0"
   },
   {
     "License": "MIT",
     "Name": "botocore-stubs",
-    "Version": "1.43.14"
+    "Version": "1.43.126"
   },
   {
     "License": "MIT",
     "Name": "bracex",
-    "Version": "3.0.1"
+    "Version": "3.2.2"
   },
   {
     "License": "BSD License",
@@ -202,12 +202,12 @@
   {
     "License": "Mozilla Public License 2.0 (MPL 2.0)",
     "Name": "certifi",
-    "Version": "2026.7.22"
+    "Version": "2026.10.23"
   },
   {
     "License": "MIT-0",
     "Name": "cffi",
-    "Version": "2.1.0"
+    "Version": "2.1.1"
   },
   {
     "License": "MIT",
@@ -217,7 +217,7 @@
   {
     "License": "MIT",
     "Name": "charset-normalizer",
-    "Version": "3.4.9"
+    "Version": "3.5.2"
   },
   {
     "License": "Apache Software License",
@@ -247,12 +247,12 @@
   {
     "License": "Apache-2.0",
     "Name": "coverage",
-    "Version": "7.15.2"
+    "Version": "7.17.2"
   },
   {
     "License": "Apache-2.0 OR BSD-3-Clause",
     "Name": "cryptography",
-    "Version": "50.0.0"
+    "Version": "50.0.2"
   },
   {
     "License": "Apache Software License",
@@ -272,7 +272,7 @@
   {
     "License": "Python Software Foundation License",
     "Name": "distlib",
-    "Version": "0.4.3"
+    "Version": "0.4.4"
   },
   {
     "License": "Apache-2.0",
@@ -307,7 +307,7 @@
   {
     "License": "MIT",
     "Name": "filelock",
-    "Version": "3.32.2"
+    "Version": "4.2.10"
   },
   {
     "License": "Apache-2.0",
@@ -325,9 +325,9 @@
     "Version": "25.12.0"
   },
   {
-    "License": "Apache Software License",
+    "License": "Apache-2.0",
     "Name": "googleapis-common-protos",
-    "Version": "1.75.0"
+    "Version": "1.76.0"
   },
   {
     "License": "MIT License",
@@ -352,12 +352,12 @@
   {
     "License": "MIT",
     "Name": "identify",
-    "Version": "2.6.19"
+    "Version": "2.6.20"
   },
   {
     "License": "BSD-3-Clause",
     "Name": "idna",
-    "Version": "3.18"
+    "Version": "3.20"
   },
   {
     "License": "Apache Software License",
@@ -372,7 +372,7 @@
   {
     "License": "MIT",
     "Name": "iniconfig",
-    "Version": "2.3.0"
+    "Version": "2.3.1"
   },
   {
     "License": "MIT License",
@@ -402,7 +402,7 @@
   {
     "License": "MIT",
     "Name": "librt",
-    "Version": "0.13.0"
+    "Version": "0.16.0"
   },
   {
     "License": "Apache-2.0",
@@ -412,7 +412,7 @@
   {
     "License": "MIT License",
     "Name": "linkify-it-py",
-    "Version": "2.1.0"
+    "Version": "2.2.0"
   },
   {
     "License": "MIT License",
@@ -422,7 +422,7 @@
   {
     "License": "MIT License",
     "Name": "markdown-it-py",
-    "Version": "4.2.0"
+    "Version": "4.3.0"
   },
   {
     "License": "MIT",
@@ -432,12 +432,12 @@
   {
     "License": "MIT License",
     "Name": "mcp",
-    "Version": "1.23.3"
+    "Version": "1.29.0"
   },
   {
     "License": "MIT License",
     "Name": "mdit-py-plugins",
-    "Version": "0.6.1"
+    "Version": "0.7.0"
   },
   {
     "License": "MIT License",
@@ -447,32 +447,32 @@
   {
     "License": "Apache-2.0",
     "Name": "msgpack",
-    "Version": "1.2.1"
+    "Version": "1.2.4"
   },
   {
-    "License": "Apache License 2.0",
+    "License": "Apache-2.0",
     "Name": "multidict",
-    "Version": "6.7.1"
+    "Version": "7.2.1"
   },
   {
     "License": "MIT",
     "Name": "mypy",
-    "Version": "2.3.0"
+    "Version": "2.4.1"
   },
   {
     "License": "MIT",
     "Name": "mypy-boto3-ec2",
-    "Version": "1.43.59"
+    "Version": "1.43.124"
   },
   {
     "License": "MIT",
     "Name": "mypy-boto3-s3",
-    "Version": "1.43.50"
+    "Version": "1.43.106"
   },
   {
     "License": "MIT",
     "Name": "mypy_extensions",
-    "Version": "1.1.0"
+    "Version": "1.2.0"
   },
   {
     "License": "BSD License",
@@ -482,12 +482,12 @@
   {
     "License": "BSD License",
     "Name": "nodeenv",
-    "Version": "1.10.0"
+    "Version": "1.12.0"
   },
   {
     "License": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
     "Name": "numpy",
-    "Version": "2.5.1"
+    "Version": "2.5.4"
   },
   {
     "License": "MIT License",
@@ -570,14 +570,14 @@
     "Version": "3.19.0"
   },
   {
-    "License": "Apache Software License",
-    "Name": "pip-api",
-    "Version": "0.0.34"
-  },
-  {
     "License": "MIT",
     "Name": "pip-requirements-parser",
     "Version": "32.0.1"
+  },
+  {
+    "License": "Apache Software License",
+    "Name": "pip_api",
+    "Version": "0.0.35"
   },
   {
     "License": "Apache Software License",
@@ -587,12 +587,12 @@
   {
     "License": "MIT",
     "Name": "platformdirs",
-    "Version": "4.11.0"
+    "Version": "4.14.5"
   },
   {
     "License": "MIT License",
     "Name": "pluggy",
-    "Version": "1.6.0"
+    "Version": "1.7.0"
   },
   {
     "License": "BSD",
@@ -607,12 +607,12 @@
   {
     "License": "MIT",
     "Name": "pre_commit",
-    "Version": "4.6.1"
+    "Version": "4.7.0"
   },
   {
-    "License": "Apache Software License",
+    "License": "Apache-2.0",
     "Name": "propcache",
-    "Version": "0.5.2"
+    "Version": "0.5.4"
   },
   {
     "License": "3-Clause BSD License",
@@ -637,27 +637,27 @@
   {
     "License": "BSD-3-Clause",
     "Name": "pycparser",
-    "Version": "3.0"
+    "Version": "3.12"
   },
   {
     "License": "MIT",
     "Name": "pydantic",
-    "Version": "2.13.4"
+    "Version": "2.14.3"
   },
   {
     "License": "MIT",
     "Name": "pydantic-settings",
-    "Version": "2.14.2"
+    "Version": "2.16.2"
   },
   {
     "License": "MIT",
     "Name": "pydantic_core",
-    "Version": "2.46.4"
+    "Version": "2.50.4"
   },
   {
     "License": "MIT",
     "Name": "pyparsing",
-    "Version": "3.3.2"
+    "Version": "3.3.3"
   },
   {
     "License": "MIT",
@@ -690,24 +690,24 @@
     "Version": "2.9.0.post0"
   },
   {
-    "License": "MIT License",
+    "License": "MIT",
     "Name": "python-discovery",
-    "Version": "1.5.1"
+    "Version": "1.9.5"
   },
   {
     "License": "BSD-3-Clause",
     "Name": "python-dotenv",
-    "Version": "1.2.2"
+    "Version": "1.2.4"
   },
   {
     "License": "GNU Lesser General Public License v3 (LGPLv3)",
     "Name": "python-gitlab",
-    "Version": "8.5.0"
+    "Version": "8.6.0"
   },
   {
     "License": "Apache-2.0",
     "Name": "python-multipart",
-    "Version": "0.0.32"
+    "Version": "0.0.33"
   },
   {
     "License": "MIT",
@@ -727,7 +727,7 @@
   {
     "License": "Apache-2.0 AND CNRI-Python",
     "Name": "regex",
-    "Version": "2026.7.19"
+    "Version": "2026.11.9"
   },
   {
     "License": "Apache Software License",
@@ -747,7 +747,7 @@
   {
     "License": "MIT",
     "Name": "rpds-py",
-    "Version": "2026.6.3"
+    "Version": "2026.9.1"
   },
   {
     "License": "MIT License",
@@ -762,7 +762,7 @@
   {
     "License": "MIT",
     "Name": "ruff",
-    "Version": "0.16.1"
+    "Version": "0.17.4"
   },
   {
     "License": "Apache Software License",
@@ -772,12 +772,17 @@
   {
     "License": "Apache Software License",
     "Name": "s3transfer",
-    "Version": "0.19.2"
+    "Version": "0.19.3"
   },
   {
     "License": "MIT License",
     "Name": "schema",
     "Version": "0.7.8"
+  },
+  {
+    "License": "BSD License",
+    "Name": "segno",
+    "Version": "1.6.6"
   },
   {
     "License": "BSD License",
@@ -787,7 +792,7 @@
   {
     "License": "LGPL-2.1-or-later",
     "Name": "semgrep",
-    "Version": "1.172.0"
+    "Version": "1.185.0"
   },
   {
     "License": "ISC License (ISCL)",
@@ -812,7 +817,7 @@
   {
     "License": "MIT",
     "Name": "soupsieve",
-    "Version": "2.9.1"
+    "Version": "4.1"
   },
   {
     "License": "Apache-2.0",
@@ -822,17 +827,22 @@
   {
     "License": "BSD-3-Clause",
     "Name": "sse-starlette",
-    "Version": "3.4.6"
+    "Version": "3.7.0"
   },
   {
     "License": "BSD-3-Clause",
     "Name": "starlette",
-    "Version": "1.3.1"
+    "Version": "1.10.0"
   },
   {
     "License": "Apache-2.0",
     "Name": "stevedore",
-    "Version": "5.9.0"
+    "Version": "5.9.1"
+  },
+  {
+    "License": "MIT OR Apache-2.0",
+    "Name": "structlog",
+    "Version": "26.1.0"
   },
   {
     "License": "MIT License",
@@ -842,7 +852,7 @@
   {
     "License": "MIT License\n\n Copyright (c) 2025 Augmenting Integrations LLC\n\n Permission is hereby granted, free of charge, to any person obtaining a copy\n of this software and associated documentation files (the \"Software\"), to deal\n in the Software without restriction, including without limitation the rights\n to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n copies of the Software, and to permit persons to whom the Software is\n furnished to do so, subject to the following conditions:\n\n The above copyright notice and this permission notice shall be included in all\n copies or substantial portions of the Software.\n\n THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n SOFTWARE.",
     "Name": "tagmania",
-    "Version": "2.7.1"
+    "Version": "2.7.2"
   },
   {
     "License": "MIT License",
@@ -872,22 +882,17 @@
   {
     "License": "MPL-2.0 AND MIT",
     "Name": "tqdm",
-    "Version": "4.70.0"
-  },
-  {
-    "License": "MIT License",
-    "Name": "types-awscrt",
-    "Version": "0.34.1"
+    "Version": "4.70.1"
   },
   {
     "License": "MIT",
     "Name": "types-s3transfer",
-    "Version": "0.16.0"
+    "Version": "0.19.3"
   },
   {
     "License": "MIT",
     "Name": "typing-inspection",
-    "Version": "0.4.2"
+    "Version": "0.4.5"
   },
   {
     "License": "PSF-2.0",
@@ -896,33 +901,28 @@
   },
   {
     "License": "MIT License",
-    "Name": "uc-micro-py",
-    "Version": "2.0.0"
-  },
-  {
-    "License": "MIT License",
     "Name": "unidiff",
-    "Version": "1.0.0"
+    "Version": "1.0.1"
   },
   {
     "License": "MIT",
     "Name": "uritools",
-    "Version": "6.1.3"
+    "Version": "7.0.0"
   },
   {
     "License": "MIT",
     "Name": "urllib3",
-    "Version": "2.7.0"
+    "Version": "2.8.0"
   },
   {
     "License": "BSD-3-Clause",
     "Name": "uvicorn",
-    "Version": "0.52.0"
+    "Version": "0.54.0"
   },
   {
     "License": "MIT",
     "Name": "virtualenv",
-    "Version": "21.7.1"
+    "Version": "21.14.5"
   },
   {
     "License": "MIT",
@@ -942,11 +942,11 @@
   {
     "License": "Apache-2.0",
     "Name": "yarl",
-    "Version": "1.24.5"
+    "Version": "1.25.1"
   },
   {
     "License": "MIT",
     "Name": "zipp",
-    "Version": "4.1.0"
+    "Version": "4.1.2"
   }
 ]

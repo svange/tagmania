@@ -82,7 +82,7 @@ cluster-snap<span class="w"> </span>--backup<span class="w"> </span>--name<span 
 cluster-snap<span class="w"> </span>--restore<span class="w"> </span>--name<span class="w"> </span>daily-backup<span class="w"> </span>production-web
 
 <span class="c1"># Targeted restore (only web servers)</span>
-cluster-snap<span class="w"> </span>--restore<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;.*-web-.*&quot;</span><span class="w"> </span>production-web
+cluster-snap<span class="w"> </span>--restore<span class="w"> </span>--target<span class="w"> </span><span class="s2">".*-web-.*"</span><span class="w"> </span>production-web
 </code></pre>
 </div>
 </code></pre>
@@ -96,10 +96,10 @@ cluster-snap<span class="w"> </span>--restore<span class="w"> </span>--target<sp
 
                         <label class="view-source-button" for="mod-tagmania-view-source"><span>View Source</span></label>
 
-                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos"> 1</span></a><span class="sd">&quot;&quot;&quot;Tagmania - AWS EC2 Cluster Management Tools.</span>
+                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos"> 1</span></a><span class="sd">"""Tagmania - AWS EC2 Cluster Management Tools.</span>
 </span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a>
 </span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a><span class="sd">Tagmania provides command-line tools for managing AWS EC2 clusters through tag-based operations.</span>
-</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a><span class="sd">It offers utilities for starting, stopping, and creating snapshots of clusters identified by their &quot;Cluster&quot; tag.</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a><span class="sd">It offers utilities for starting, stopping, and creating snapshots of clusters identified by their "Cluster" tag.</span>
 </span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a>
 </span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a><span class="sd">Key Features:</span>
 </span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a><span class="sd">    - Start and stop EC2 instances in clusters</span>
@@ -127,17 +127,17 @@ cluster-snap<span class="w"> </span>--restore<span class="w"> </span>--target<sp
 </span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a><span class="sd">    cluster-snap --restore --name daily-backup production-web</span>
 </span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a>
 </span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a><span class="sd">    # Targeted restore (only web servers)</span>
-</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a><span class="sd">    cluster-snap --restore --target &quot;.*-web-.*&quot; production-web</span>
+</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a><span class="sd">    cluster-snap --restore --target ".*-web-.*" production-web</span>
 </span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a><span class="sd">    ```</span>
 </span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a>
 </span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a><span class="sd">Note:</span>
-</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a><span class="sd">    All operations require EC2 instances to have a &quot;Cluster&quot; tag for identification.</span>
+</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a><span class="sd">    All operations require EC2 instances to have a "Cluster" tag for identification.</span>
 </span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a><span class="sd">    AWS CLI profile configuration is required for authentication.</span>
-</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a><span class="sd">"""</span>
 </span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a>
-</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a><span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;2.7.1&quot;</span>
-</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a><span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Samuel Vange&quot;</span>
-</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a><span class="n">__email__</span> <span class="o">=</span> <span class="s2">&quot;7166607+svange@users.noreply.github.com&quot;</span>
+</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a><span class="n">__version__</span> <span class="o">=</span> <span class="s2">"2.7.2"</span>
+</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a><span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Samuel Vange"</span>
+</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a><span class="n">__email__</span> <span class="o">=</span> <span class="s2">"7166607+svange@users.noreply.github.com"</span>
 </span></pre></div>
 
 
