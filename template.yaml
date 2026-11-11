@@ -19,6 +19,10 @@ Parameters:
     Description: Name of the third test cluster (1 instance, for CLI tests)
 
 Resources:
+  # Test instances use t2.nano: 1 vCPU each, the smallest and cheapest
+  # x86 type. 4 instances = 4 vCPUs, half of the account's 8-vCPU quota for
+  # standard on-demand instances, so CI leaves room for other work there.
+
   # VPC for test instances
   TestVPC:
     Type: AWS::EC2::VPC
@@ -99,7 +103,7 @@ Resources:
   Cluster1Instance1:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t3.micro
+      InstanceType: t2.nano
       PropagateTagsToVolumeOnCreation: true
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
@@ -127,7 +131,7 @@ Resources:
   Cluster2Instance1:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t3.micro
+      InstanceType: t2.nano
       PropagateTagsToVolumeOnCreation: true
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
@@ -154,7 +158,7 @@ Resources:
   Cluster2Instance2:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t3.micro
+      InstanceType: t2.nano
       PropagateTagsToVolumeOnCreation: true
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
@@ -182,7 +186,7 @@ Resources:
   Cluster3Instance1:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t3.micro
+      InstanceType: t2.nano
       PropagateTagsToVolumeOnCreation: true
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64}}'
       SubnetId: !Ref TestSubnet
