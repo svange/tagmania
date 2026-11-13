@@ -51,6 +51,8 @@ from typing import Any
 
 import boto3
 
+from tagmania import telemetry
+
 from .filterset import FilterSet
 from .tagset import TagSet
 from .timing import log_duration
@@ -165,6 +167,15 @@ class ClusterSet:
             return self.cluster_names
         return [self.cluster_names]
 
+    def _limited(self, resource_type: str, collection: Any) -> list[Any]:
+        """Materialize a boto3 collection up to the safety limit (_MAX_ITEMS).
+
+        A result that reaches the limit may be cut short; telemetry counts it.
+        """
+        items = list(collection.limit(self._MAX_ITEMS))
+        telemetry.note_query(resource_type, len(items), self._MAX_ITEMS)
+        return items
+
     def get_cluster_filter(self) -> list[dict[str, Any]]:
         """Return a shallow copy of the base cluster tag filter."""
         return self._cluster_filter.copy()
@@ -226,6 +237,7 @@ class ClusterSet:
             name = TagSet(instance.tags).get("Name")
             print(f"Starting {name} ({instance.id})")
             instance.start()
+        telemetry.note_processed("instance", len(instances))
         print(f"Waiting for {len(instances)} instances to start...")
         self._wait_instances_running([i.id for i in instances])
 
@@ -235,6 +247,7 @@ class ClusterSet:
             name = TagSet(instance.tags).get("Name")
             print(f"Stopping {name} ({instance.id})")
             instance.stop()
+        telemetry.note_processed("instance", len(instances))
         print(f"Waiting for {len(instances)} instances to stop...")
         self._wait_instances_stopped([i.id for i in instances])
 
@@ -249,6 +262,7 @@ class ClusterSet:
                 print(f"Detaching {device} ({volume.id}) from {shortname} ({instance.id})")
                 volume.detach_from_instance(Device=device, InstanceId=instance.id)
                 volume_ids.append(volume.id)
+        telemetry.note_processed("volume", len(volume_ids))
         if volume_ids:
             print(f"Waiting for {len(volume_ids)} volumes to be detached...")
             self.wait_for_volumes(volume_ids, "volume_available")
@@ -260,6 +274,7 @@ class ClusterSet:
             print(f"Deleting volume {volume.id}")
             volume.delete()
             volume_ids.append(volume.id)
+        telemetry.note_processed("volume", len(volume_ids))
         print(f"Waiting for {len(volume_ids)} volumes to be deleted...")
         self.wait_for_volumes(volume_ids, "volume_deleted")
 
@@ -277,6 +292,7 @@ class ClusterSet:
                     print(f"Attaching {device} ({volume.id}) to {shortname} ({instance.id})")
                     volume.attach_to_instance(Device=device, InstanceId=instance.id)
                     volume_ids.append(volume.id)
+        telemetry.note_processed("volume", len(volume_ids))
         return volume_ids
 
     def _create_volumes_from_snapshots(
@@ -313,6 +329,7 @@ class ClusterSet:
             )
             volume_ids.append(volume.id)
 
+        telemetry.note_processed("volume", len(volume_ids))
         if volume_ids:
             print(f"Waiting for {len(volume_ids)} volumes to be created...")
             self.wait_for_volumes(volume_ids, "volume_available")
@@ -343,7 +360,7 @@ class ClusterSet:
         """
         self._logger.debug("method_call: get_instances")
         instances = self._query_instances(self._ACTIVE_INSTANCE_STATES)
-        return list(instances.limit(self._MAX_ITEMS))
+        return self._limited("instance", instances)
 
     def get_deployed_clusters(self) -> dict[Any, list[Any]]:
         """Get a dictionary mapping each cluster name to its deployed EC2 instances.
@@ -372,7 +389,7 @@ class ClusterSet:
         """
         self._logger.debug("method_call: get_instances")
         instances = self._query_instances(self._RUNNING_INSTANCE_STATES)
-        return list(instances.limit(self._MAX_ITEMS))
+        return self._limited("instance", instances)
 
     def get_running_clusters(self) -> dict[Any, list[Any]]:
         """Get a dictionary with all clusters that are powered on.
@@ -393,7 +410,7 @@ class ClusterSet:
         """
         self._logger.debug("method_call: get_instances")
         instances = self._query_instances("stopped")
-        return list(instances.limit(self._MAX_ITEMS))
+        return self._limited("instance", instances)
 
     def get_stopped_clusters(self) -> dict[Any, list[Any]]:
         """Get a dictionary with all clusters that are powered off.
@@ -423,20 +440,22 @@ class ClusterSet:
             several minutes for large clusters.
         """
         self._logger.debug("method_call: start_instances")
-        instances = self.get_stopped_instances()
-        if not instances:
-            print("No instances to start.")
-        else:
-            self._start_instance_batch(instances)
+        with telemetry.measure("start_instances"):
+            instances = self.get_stopped_instances()
+            if not instances:
+                print("No instances to start.")
+            else:
+                self._start_instance_batch(instances)
 
     def stop_instances(self) -> None:
         """Stop all running EC2 instances associated with this cluster."""
         self._logger.debug("method_call: stop_instances")
-        instances = self.get_running_instances()
-        if not instances:
-            print("No instances to stop.")
-        else:
-            self._stop_instance_batch(instances)
+        with telemetry.measure("stop_instances"):
+            instances = self.get_running_instances()
+            if not instances:
+                print("No instances to stop.")
+            else:
+                self._stop_instance_batch(instances)
 
     def tag_instances(self, tags: list[dict[str, str]]) -> None:
         """Apply tags to all instances in this cluster.
@@ -476,7 +495,7 @@ class ClusterSet:
         # doesn't clobber volumes that it is not responsible for.
         fs.add("tag:automation_key", ["PROVISIONER", self.AUTOMATION_KEY])
         volumes = self._ec2.volumes.filter(Filters=fs.to_list())
-        return list(volumes.limit(self._MAX_ITEMS))
+        return self._limited("volume", volumes)
 
     def get_kubernetes_volumes(self) -> list[Any]:
         """Get list of Kubernetes persistent volumes associated with this cluster.
@@ -518,7 +537,7 @@ class ClusterSet:
         if label is not None:
             fs.add("tag:Label", label)
         volumes = self._ec2.volumes.filter(Filters=fs.to_list())
-        return list(volumes.limit(self._MAX_ITEMS))
+        return self._limited("volume", volumes)
 
     def attach_volumes(self, label: str) -> None:
         """Attach restored volumes with the given label to their associated instances.
@@ -527,14 +546,15 @@ class ClusterSet:
             label: Label of restored volumes to attach.
         """
         self._logger.debug("method_call: attach_volumes")
-        instances = self.get_instances()
-        volumes = self.get_restored_volumes(label)
-        volume_ids = self._attach_matching_volumes(instances, volumes)
-        if not volume_ids:
-            print("Error: No volumes to attach.")
-        else:
-            print(f"Waiting for {len(volume_ids)} volumes to be attached...")
-            self.wait_for_volumes(volume_ids, "volume_in_use")
+        with telemetry.measure("attach_volumes"):
+            instances = self.get_instances()
+            volumes = self.get_restored_volumes(label)
+            volume_ids = self._attach_matching_volumes(instances, volumes)
+            if not volume_ids:
+                print("Error: No volumes to attach.")
+            else:
+                print(f"Waiting for {len(volume_ids)} volumes to be attached...")
+                self.wait_for_volumes(volume_ids, "volume_in_use")
 
     def create_volumes(self, label: str) -> None:
         """Create new EBS volumes from managed snapshots with the given label.
@@ -571,7 +591,8 @@ class ClusterSet:
     def detach_volumes(self) -> None:
         """Detach all volumes currently attached to instances in this cluster."""
         self._logger.debug("method_call: detach_volumes")
-        self._detach_volumes_from_instances(self.get_instances())
+        with telemetry.measure("detach_volumes"):
+            self._detach_volumes_from_instances(self.get_instances())
 
     def tag_volumes(self, tags: list[dict[str, str]]) -> None:
         """Apply tags to all managed volumes in this cluster.
@@ -642,7 +663,7 @@ class ClusterSet:
         if label is not None:
             fs.add("tag:Label", label)
         snapshots = self._ec2.snapshots.filter(Filters=fs.to_list())
-        return list(snapshots.limit(self._MAX_ITEMS))
+        return self._limited("snapshot", snapshots)
 
     def create_snapshots(self, label: str) -> None:
         """Create labeled EBS snapshots of all volumes attached to cluster instances.
@@ -679,6 +700,7 @@ class ClusterSet:
                     )
                     snapshot_ids.append(snapshot.id)
 
+            telemetry.note_processed("snapshot", len(snapshot_ids))
             print(f"Waiting for {len(snapshot_ids)} snapshots to complete...")
             waiter = self._ec2_client.get_waiter("snapshot_completed")
             waiter.wait(
@@ -702,6 +724,7 @@ class ClusterSet:
             for snapshot in snapshots:
                 print(f"Deleting snapshot {snapshot.id}")
                 snapshot.delete()
+            telemetry.note_processed("snapshot", len(snapshots))
             # There is no waiter for snapshot deletion. Add a small delay to guard
             # against any possible timing issues.
             time.sleep(2)

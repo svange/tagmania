@@ -403,6 +403,32 @@ cluster-snap --list test-cluster
 pip install tagmania==2.5.0
 ```
 
+## Telemetry
+
+The CLIs (`cluster-start`, `cluster-stop`, `cluster-snap`) send one small anonymous usage report when each run ends, so the maintainers can see which commands are used, how long operations take and which errors happen. Using `ClusterSet` as a library sends nothing.
+
+**Turn it off** with either environment variable:
+
+```bash
+export TAGMANIA_TELEMETRY=off   # or 0, false, no
+export DO_NOT_TRACK=1
+```
+
+**Where it goes**: an OpenTelemetry (OTLP/HTTP JSON) POST to `https://telemetry.augmentingintegrations.com/v1/metrics`, run by Augmenting Integrations. It uses no AWS credentials, and it never changes what a command does: if the report cannot be sent within two seconds it is dropped, and nothing is retried or stored on disk.
+
+**What is sent**, and nothing else:
+
+| Metric | What it counts | Attributes |
+| --- | --- | --- |
+| `tagmania.cli.invocations` | one per run | the command, the action (`start`, `stop`, `backup`, `restore`, `delete`, `list`), whether `--target` and `--profile` were given (true or false), the outcome (`success`, `noop`, `aborted`, `error`) and, on an error, its class: `error.type` (`ClientError`, `WaiterError`, `NoCredentialsError`, `InvalidTargetRegex`), and the AWS error code and API operation from a fixed list (anything else is sent as `other`) |
+| `tagmania.operation.duration` | seconds per operation | the operation (`start_instances`, `stop_instances`, `backup`, `restore`, `restore_targeted`, `create_snapshots`, `delete_snapshots`, `create_volumes`, `delete_volumes`, `detach_volumes`, `attach_volumes`), and `success` or `error` |
+| `tagmania.resources.processed` | instances, volumes and snapshots acted on | the resource type and the operation |
+| `tagmania.safety_limit.hit` | a query returned the 150-item limit | the resource type |
+
+Plus the service name `tagmania` and its version.
+
+**What is never sent**: cluster names, profile names, the `--target` pattern, snapshot labels, instance names, AWS resource ids (`i-`, `vol-`, `snap-`, `subnet-`, `vpc-`, ...), account ids, ARNs, error messages, or anything about your machine; the ingest does not log the address a report comes from. Every value comes from a fixed list in `src/tagmania/telemetry.py`; a value that looks like a resource id, a 12-digit account id or an ARN is left out before sending, and the server drops it again.
+
 ## Troubleshooting
 
 - **`No instances found`**: The `Cluster` tag doesn't match any running or stopped instance. Tags are case-sensitive; verify with `aws ec2 describe-instances --filters Name=tag:Cluster,Values=my-cluster`.
