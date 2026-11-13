@@ -1,4 +1,9 @@
+import os
 from pathlib import Path
+
+# The test suite sends no telemetry, including from the CLIs the integration
+# tests run as subprocesses (they inherit this environment).
+os.environ["TAGMANIA_TELEMETRY"] = "off"
 
 
 class Secret:

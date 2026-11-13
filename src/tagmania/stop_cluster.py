@@ -35,6 +35,7 @@ Warning:
 
 import argparse
 
+from tagmania import telemetry
 from tagmania.iac_tools.clusterset import ClusterSet
 
 
@@ -68,9 +69,10 @@ def main() -> None:
     parser.add_argument("--profile", "-p", help="the AWS profile to use", default=None)
     args = parser.parse_args()
 
-    cluster = ClusterSet(args.cluster, profile=args.profile)
-    cluster.stop_instances()
-    print(f"Cluster {cluster.cluster_names} stopped successfully.")
+    with telemetry.cli_run("cluster-stop", "stop", used_profile=args.profile is not None):
+        cluster = ClusterSet(args.cluster, profile=args.profile)
+        cluster.stop_instances()
+        print(f"Cluster {cluster.cluster_names} stopped successfully.")
 
 
 if __name__ == "__main__":
