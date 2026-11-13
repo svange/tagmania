@@ -38,6 +38,7 @@ import http.client
 import json
 import os
 import re
+import ssl
 import time
 import urllib.parse
 from collections.abc import Iterator, Mapping
@@ -367,7 +368,12 @@ def send(payload: dict[str, Any], endpoint: str = ENDPOINT) -> bool:
         if url.scheme != "https" or not url.hostname:
             return False
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-        connection = http.client.HTTPSConnection(url.hostname, url.port, timeout=TIMEOUT_SECONDS)
+        # The audit rule asks that the connection be made securely on this
+        # Python: an explicit default context verifies the certificate and the
+        # host name (tests/test_08_telemetry.py checks both).
+        connection = http.client.HTTPSConnection(  # nosemgrep: python.lang.security.audit.httpsconnection-detected.httpsconnection-detected
+            url.hostname, url.port, timeout=TIMEOUT_SECONDS, context=ssl.create_default_context()
+        )
         try:
             connection.request(
                 "POST",

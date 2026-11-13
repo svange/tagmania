@@ -1,4 +1,5 @@
 import json
+import ssl
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -250,9 +251,12 @@ class TestSend:
         connection.getresponse.return_value = SimpleNamespace(status=200, read=lambda: b"{}")
         with patch("http.client.HTTPSConnection", return_value=connection) as cls:
             assert telemetry.send({"a": 1}) is True
-        cls.assert_called_once_with(
-            "telemetry.augmentingintegrations.com", None, timeout=telemetry.TIMEOUT_SECONDS
-        )
+        cls.assert_called_once()
+        assert cls.call_args.args == ("telemetry.augmentingintegrations.com", None)
+        assert cls.call_args.kwargs["timeout"] == telemetry.TIMEOUT_SECONDS
+        context = cls.call_args.kwargs["context"]
+        assert context.verify_mode == ssl.CERT_REQUIRED
+        assert context.check_hostname is True
         method, path = connection.request.call_args.args
         assert (method, path) == ("POST", "/v1/metrics")
         kwargs = connection.request.call_args.kwargs
