@@ -44,7 +44,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install UV
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -74,7 +74,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install UV
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -141,7 +141,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install UV
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -182,7 +182,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install UV
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -214,7 +214,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install UV
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -287,7 +287,7 @@ jobs:
           use-installer: true
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
         with:
           role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
           aws-region: ${{ env.TESTING_REGION }}
@@ -319,7 +319,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install UV
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -410,7 +410,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install UV
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -528,7 +528,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install UV
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
